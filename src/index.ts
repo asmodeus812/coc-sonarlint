@@ -39,6 +39,7 @@ import {
     configureCompilationDatabase,
     notifyMissingCompileCommands,
 } from "./cfamily/cfamily";
+import {rejects} from "assert";
 
 const DOCUMENT_SELECTOR = [
     {scheme: "file", pattern: "**/*"},
@@ -73,10 +74,14 @@ async function runJavaServer(
             throw error;
         })
         .then((requirements) => {
-            return new Promise<StreamInfo>((resolve, _) => {
-                const {command, args} = languageServerCommand(context, requirements);
+            return new Promise<StreamInfo>((resolve, reject) => {
+                const {command, args}: any = languageServerCommand(context, requirements);
+                if (!command) {
+                    reject(undefined)
+                    return
+                }
                 logToSonarLintOutput(`Executing ${command} ${args.join(" ")}`);
-                window.showInformationMessage("Sonarlint is starting...");
+                window.showInformationMessage("Sonarlint server is starting...");
                 const process = ChildProcess.spawn(command, args);
 
                 process.stderr.on("data", function (data) {

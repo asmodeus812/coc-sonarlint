@@ -6,11 +6,13 @@
  * ------------------------------------------------------------------------------------------ */
 "use strict";
 
+import * as fs from 'fs'
 import * as Path from "path";
 import * as coc from "coc.nvim";
-import { getSonarLintConfiguration } from "../settings/settings";
-import { RequirementsData } from "../util/requirements";
+import {getSonarLintConfiguration} from "../settings/settings";
+import {RequirementsData} from "../util/requirements";
 import * as util from "../util/util";
+import {logToSonarLintOutput} from 'coc-sonarlint/src/util/logging';
 
 declare let v8debug: object;
 const DEBUG = typeof v8debug === "object" || util.startedInDebugMode(process);
@@ -19,7 +21,23 @@ export function languageServerCommand(
     context: coc.ExtensionContext,
     requirements: RequirementsData,
 ) {
-    const location = getSonarLintConfiguration().get("ls.directory", context.extensionPath)
+    let location: string | undefined = getSonarLintConfiguration().get('ls.directory')
+    location = !location ? Path.resolve(__dirname, '../') : location
+
+    if (location) {
+        location = coc.workspace.expand(location)
+        if (!fs.existsSync(location)) {
+            logToSonarLintOutput(
+                `Sonar can not start, invalid or non existent path was detected ${location}`,
+            );
+            coc.window.showWarningMessage(`Sonar binaries were not found, check SonarLint output`)
+            return undefined
+        }
+    } else {
+        coc.window.showWarningMessage(`Sonar binaries directory could not be resolved at all`)
+        return undefined
+    }
+
     const serverJar = Path.resolve(
         location,
         "server",
