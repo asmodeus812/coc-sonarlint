@@ -283,27 +283,25 @@ function installCustomRequestHandlers(context: coc.ExtensionContext) {
         protocol.CanShowMissingRequirementNotification.type, () => {return true});
     languageClient.onNotification(
         protocol.ShowSonarLintOutputNotification.type,
-        () => coc.commands.executeCommand(Commands.SHOW_SONARLINT_OUTPUT),
+        () => void coc.commands.executeCommand(Commands.SHOW_SONARLINT_OUTPUT),
     );
     languageClient.onNotification(
         protocol.OpenJavaHomeSettingsNotification.type,
-        () => coc.commands.executeCommand(Commands.OPEN_SETTINGS, JAVA_HOME_CONFIG),
+        () => void coc.commands.executeCommand(Commands.OPEN_SETTINGS, JAVA_HOME_CONFIG),
     );
     languageClient.onNotification(
         protocol.OpenPathToNodeSettingsNotification.type,
-        () =>
-            coc.commands.executeCommand(
-                Commands.OPEN_SETTINGS,
-                "sonarlint.pathToNodeExecutable",
-            ),
+        () => void coc.commands.executeCommand(
+            Commands.OPEN_SETTINGS,
+            "sonarlint.pathToNodeExecutable",
+        ),
     );
     languageClient.onNotification(
         protocol.BrowseToNotification.type,
-        (browseTo) =>
-            coc.commands.executeCommand(
-                Commands.OPEN_BROWSER,
-                coc.Uri.parse(browseTo),
-            ),
+        (browseTo) => void coc.commands.executeCommand(
+            Commands.OPEN_BROWSER,
+            coc.Uri.parse(browseTo),
+        ),
     );
     languageClient.onNotification(
         protocol.NeedCompilationDatabaseRequest.type,

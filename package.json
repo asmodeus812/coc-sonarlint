@@ -1,8 +1,8 @@
 {
     "name": "coc-sonarlint",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "sonarlint for coc.nvim",
-    "author": "Svetlozar Iliev <svetlozar321@gmail.com>",
+    "author": "asmodeus812 <svetlozar321@gmail.com>",
     "license": "MIT",
     "main": "lib/index.js",
     "keywords": [

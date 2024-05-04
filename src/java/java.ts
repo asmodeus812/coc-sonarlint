@@ -8,9 +8,9 @@
 
 import CompareVersions from "compare-versions";
 import * as coc from "coc.nvim";
-import { SonarLintExtendedLanguageClient } from "../lsp/client";
-import { GetJavaConfigResponse } from "../lsp/protocol";
-import { logToSonarLintOutput } from "../util/logging";
+import {SonarLintExtendedLanguageClient} from "../lsp/client";
+import {GetJavaConfigResponse} from "../lsp/protocol";
+import {logToSonarLintOutput} from "../util/logging";
 
 let classpathChangeListener: coc.Disposable | undefined;
 let serverModeListener: coc.Disposable | undefined;
@@ -31,6 +31,10 @@ export function installClasspathListener(
     languageClient: SonarLintExtendedLanguageClient,
 ) {
     const extension = getJavaExtension();
+    if (!extension) {
+        coc.window.showWarningMessage(`Unable to find any compliant java extension installed in the coc runtime`)
+        return
+    }
     if (extension?.isActive) {
         if (!classpathChangeListener) {
             const extensionApi = extension.exports;
@@ -44,11 +48,9 @@ export function installClasspathListener(
                 logToSonarLintOutput(`Installed classpath listener for java`);
             }
         }
-    } else {
-        if (classpathChangeListener) {
-            classpathChangeListener.dispose();
-            classpathChangeListener = undefined;
-        }
+    } else if (classpathChangeListener) {
+        classpathChangeListener.dispose();
+        classpathChangeListener = undefined;
     }
 }
 
@@ -85,11 +87,9 @@ export function installServerModeChangeListener(
             }
             logToSonarLintOutput(`Installed server mode listener for java`);
         }
-    } else {
-        if (serverModeListener) {
-            serverModeListener.dispose();
-            serverModeListener = undefined;
-        }
+    } else if (serverModeListener) {
+        serverModeListener.dispose();
+        serverModeListener = undefined;
     }
 }
 
@@ -112,6 +112,10 @@ export async function getJavaConfig(
 ): Promise<GetJavaConfigResponse | undefined> {
     const extension = getJavaExtension();
     try {
+        if (!extension) {
+            coc.window.showWarningMessage(`Unable to find any compliant java extension installed in the coc runtime`)
+            return
+        }
         const extensionApi = await extension?.activate();
         if (extensionApi && isJavaApiRecentEnough(extensionApi.apiVersion)) {
             installClasspathListener(languageClient);
@@ -123,7 +127,7 @@ export async function getJavaConfig(
             const COMPILER_COMPLIANCE_SETTING_KEY =
                 "org.eclipse.jdt.core.compiler.compliance";
             const VM_LOCATION_SETTING_KEY = "org.eclipse.jdt.ls.core.vm.location";
-            const projectSettings: { [name: string]: string } =
+            const projectSettings: {[name: string]: string} =
                 await extensionApi.getProjectSettings(fileUri, [
                     COMPILER_COMPLIANCE_SETTING_KEY,
                     VM_LOCATION_SETTING_KEY,
@@ -143,7 +147,7 @@ export async function getJavaConfig(
             };
         }
     } catch (error) {
-        console.error(error);
+        coc.window.showErrorMessage(JSON.stringify(error));
     }
 }
 
@@ -158,5 +162,9 @@ function javaConfigDisabledInLightWeightMode() {
 }
 
 function getJavaExtension(): coc.Extension<any> | undefined {
-    return coc.extensions.getExtensionById("coc-java");
+    const java = coc.extensions.getExtensionById("coc-java")
+    if (!java || java == null || java === undefined) {
+        return coc.extensions.getExtensionById("coc-java-dev")
+    }
+    return java
 }

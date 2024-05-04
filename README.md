@@ -90,7 +90,7 @@ Note: if you are using Microsoft compiler, the environment should be ready to bu
 
 ### Java analysis specific requirements
 
-To enable the support for Java analysis, you need the coc-java extension
+To enable the support for Java analysis, you need the coc-java or any coc-java compliant extension
 
 ### Jupyter notebooks
 
