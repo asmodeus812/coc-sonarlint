@@ -8,8 +8,6 @@
 
 import * as child_process from 'child_process';
 import * as vscode from 'coc.nvim';
-import * as path from 'path';
-import * as process from 'process';
 import {FileUris, ShouldAnalyseFileCheckResult} from '../lsp/protocol';
 
 const ANALYSIS_EXCLUDES = 'sonarlint.analysisExcludesStandalone';
@@ -32,14 +30,6 @@ export let extensionContext: vscode.ExtensionContext;
 export function setExtensionContext(context: vscode.ExtensionContext): void {
     extensionContext = context;
     extensionPath = extensionContext.extensionPath;
-}
-
-export function isRunningOnWindows() {
-    return /^win32/.test(process.platform);
-}
-
-export function isRunningAutoBuild() {
-    return process.env.NODE_ENV === 'continuous-integration';
 }
 
 export function execChildProcess(process: string, workingDirectory: string, channel?: vscode.OutputChannel) {
@@ -87,30 +77,6 @@ export function execChildProcess(process: string, workingDirectory: string, chan
     });
 }
 
-export function resolveExtensionFile(...segments: string[]) {
-    return vscode.Uri.file(path.join(extensionPath, ...segments));
-}
-
-export function sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-export function formatIssueMessage(message: string, ruleKey: string) {
-    return new String(`$(warning) ${message} \`sonarlint(${ruleKey})\``);
-}
-
-export function getQuickPickListItemsForWorkspaceFolders(
-    workspaceFolders: readonly vscode.WorkspaceFolder[]): vscode.QuickPickItem[] {
-    const quickPickItems: vscode.QuickPickItem[] = [];
-    for (const workspaceFolder of workspaceFolders) {
-        quickPickItems.push({
-            label: workspaceFolder.name,
-            description: workspaceFolder.uri
-        });
-    }
-    return quickPickItems;
-}
-
 export function globPatternToRegex(globPattern: string): RegExp {
     const commonSuffixGlobFormat = /^\*\*\/\*\.[a-z0-9]{1,6}$/;
     if (commonSuffixGlobFormat.test(globPattern)) {
@@ -149,11 +115,6 @@ export function globPatternToRegex(globPattern: string): RegExp {
     }
     regex = `^${regex}$`;
     return new RegExp(regex);
-}
-
-export function getFilesMatchedGlobPatterns(allFiles: vscode.Uri[], globPatterns: string[]): vscode.Uri[] {
-    const masterRegex = getMasterRegex(globPatterns);
-    return allFiles.filter(f => masterRegex.test(f.path));
 }
 
 export function getFilesNotMatchedGlobPatterns(allFiles: vscode.Uri[], globPatterns: string[]): vscode.Uri[] {
