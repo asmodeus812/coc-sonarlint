@@ -1,16 +1,13 @@
-# SonarLint for Visual Studio Code
+# SonarLint for Coc.nvim
 
 SonarLint by [Sonar](https://www.sonarsource.com/) is a free IDE extension that empowers you to fix coding issues before they exist. More than a linter, SonarLint detects and highlights issues that can lead to bugs, vulnerabilities, and code smells as you create your code. It offers clear remediation guidance and educational help, so you can fix issues before the code is committed.
 Out of the box, SonarLint in Coc supports analysis of JS/TS, Python, PHP, Java, C, C++, C#, Go, and IaC code locally in your IDE.
-
-By default, SonarLint for VCoc.nvim analyzes files **open** in the IDE. When paired with [SonarQube](https://www.sonarsource.com/products/sonarqube/) or [SonarCloud](https://www.sonarsource.com/products/sonarcloud/) in Connected Mode, SonarLint forms a powerful end-to-end code quality platform to enrich the CI/CD pipeline, ensuring any code edits or additions **across the whole project** are clean.
-In Connected Mode, your team can share common language rulesets, project analysis settings and more
 
 Sonar's [Clean Code solutions](https://www.sonarsource.com/solutions/clean-code/) help developers deliver high-quality, efficient code standards that benefit the entire team or organization.
 
 ## How it works
 
-Simply open any source file, start coding, and you will start seeing issues reported by SonarLint. Issues are highlighted in your code and also listed in the 'Problems' panel. You can access the detailed rule description directly from your editor, using the provided contextual menu.
+Simply open any source file, start coding, and you will start seeing issues reported by SonarLint. Issues are highlighted in your code You can access the detailed rule description directly from your editor, using the provided contextual menu.
 
 ## Static Analysis Rules
 
