@@ -19,8 +19,9 @@ export function languageServerCommand(
     context: coc.ExtensionContext,
     requirements: RequirementsData,
 ) {
+    const location = getSonarLintConfiguration().get("ls.directory", context.extensionPath)
     const serverJar = Path.resolve(
-        context.extensionPath,
+        location,
         "server",
         "sonarlint-ls.jar",
     );
@@ -38,28 +39,28 @@ export function languageServerCommand(
     params.push("-jar", serverJar);
     params.push("-stdio");
     params.push("-analyzers");
-    params.push(Path.resolve(context.extensionPath, "analyzers", "sonargo.jar"));
+    params.push(Path.resolve(location, "analyzers", "sonargo.jar"));
     params.push(
-        Path.resolve(context.extensionPath, "analyzers", "sonarjava.jar"),
+        Path.resolve(location, "analyzers", "sonarjava.jar"),
     );
-    params.push(Path.resolve(context.extensionPath, "analyzers", "sonarjs.jar"));
-    params.push(Path.resolve(context.extensionPath, "analyzers", "sonarphp.jar"));
+    params.push(Path.resolve(location, "analyzers", "sonarjs.jar"));
+    params.push(Path.resolve(location, "analyzers", "sonarphp.jar"));
     params.push(
-        Path.resolve(context.extensionPath, "analyzers", "sonarpython.jar"),
-    );
-    params.push(
-        Path.resolve(context.extensionPath, "analyzers", "sonarhtml.jar"),
-    );
-    params.push(Path.resolve(context.extensionPath, "analyzers", "sonarxml.jar"));
-    params.push(
-        Path.resolve(context.extensionPath, "analyzers", "sonarcfamily.jar"),
+        Path.resolve(location, "analyzers", "sonarpython.jar"),
     );
     params.push(
-        Path.resolve(context.extensionPath, "analyzers", "sonartext.jar"),
+        Path.resolve(location, "analyzers", "sonarhtml.jar"),
     );
-    params.push(Path.resolve(context.extensionPath, "analyzers", "sonariac.jar"));
+    params.push(Path.resolve(location, "analyzers", "sonarxml.jar"));
     params.push(
-        Path.resolve(context.extensionPath, "analyzers", "sonarlintomnisharp.jar"),
+        Path.resolve(location, "analyzers", "sonarcfamily.jar"),
+    );
+    params.push(
+        Path.resolve(location, "analyzers", "sonartext.jar"),
+    );
+    params.push(Path.resolve(location, "analyzers", "sonariac.jar"));
+    params.push(
+        Path.resolve(location, "analyzers", "sonarlintomnisharp.jar"),
     );
 
     return {

@@ -37,11 +37,11 @@ The SonarLint language server needs a Java Runtime (JRE) 17+. If you do not have
 
 1.  the `sonarlint.ls.javaHome` variable in Coc settings if set. For instance:
 
-   ```json
-   {
-     "sonarlint.ls.javaHome": "C:\\Program Files\\Java\\jdk-17"
-   }
-   ```
+```json
+{
+    "sonarlint.ls.javaHome": "C:\\Program Files\\Java\\jdk-17"
+}
+```
 
 2.  embedded JRE for platform-specific installations
 3.  the value of the `JDK_HOME` environment variable if set
@@ -53,6 +53,16 @@ The SonarLint language server needs a Java Runtime (JRE) 17+. If you do not have
    3.  the grandparent directory of `javac` is used. This is similar to `$(dirname $(dirname $(readlink $(which javac))))`
 
 SonarLint then uses the first JRE found in these steps to check its version. If a suitable JRE cannot be found at those places, SonarLint will ask for your permission to download and manage its own version.
+
+This extension also provides a custom root directory where the sonar lint binaries are to be found, in case you do not desire to use the one bundled with this extension
+
+```json
+{
+    "sonarlint.ls.directly": "/home/yourname/sonarlint"
+}
+```
+
+The directory must contain two folders, a server/ and analyzers/, where the server binary is located in the server/ folder and all analyzer binaries are located in the analyzers/ folder
 
 ### JS/TS analysis specific requirements
 
@@ -90,11 +100,11 @@ SonarLint for Coc supports analysis of Python code inside Jupyter notebooks.
 
 It is possible to specify extra analyzer properties that will be used for analysis. Example:
 
-```jsonc
+```json
 {
   "sonarlint.analyzerProperties": {
     "sonar.javascript.node.maxspace": "4096",
-  },
+  }
 }
 ```
 
