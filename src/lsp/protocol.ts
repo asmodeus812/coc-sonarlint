@@ -4,41 +4,41 @@
  * sonarlint@sonarsource.com
  * Licensed under the LGPLv3 License. See LICENSE.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-'use strict';
+'use strict'
 
-import * as coc from "coc.nvim";
+import * as coc from "coc.nvim"
 
 export namespace ShowRuleDescriptionNotification {
     export const type = new coc.NotificationType<ShowRuleDescriptionParams>(
         "sonarlint/showRuleDescription",
-    );
+    )
 }
 
 export namespace SuggestBindingNotification {
     export const type = new coc.NotificationType<SuggestBindingParams>(
         "sonarlint/suggestBinding",
-    );
+    )
 }
 
 export interface SuggestBindingParams {
     suggestions: {
-        [folderUri: string]: Array<BindingSuggestion>;
-    };
+        [folderUri: string]: Array<BindingSuggestion>
+    }
 }
 
 export interface BindingSuggestion {
-    connectionId: string;
-    sonarProjectKey: string;
-    sonarProjectName: string;
-    isFromSharedConfiguration: boolean;
+    connectionId: string
+    sonarProjectKey: string
+    sonarProjectName: string
+    isFromSharedConfiguration: boolean
 }
 
 export interface ListFilesInScopeResponse {
-    foundFiles: Array<FoundFileDto>;
+    foundFiles: Array<FoundFileDto>
 }
 
 export interface FolderUriParams {
-    folderUri: string;
+    folderUri: string
 }
 
 export namespace ListFilesInFolderRequest {
@@ -46,109 +46,109 @@ export namespace ListFilesInFolderRequest {
         FolderUriParams,
         ListFilesInScopeResponse,
         void
-    >("sonarlint/listFilesInFolder");
+    >("sonarlint/listFilesInFolder")
 }
 
 export interface FoundFileDto {
-    fileName: string;
-    filePath: string;
-    content?: string;
+    fileName: string
+    filePath: string
+    content?: string
 }
 
 export namespace ShowHotspotRuleDescriptionNotification {
     export const type =
         new coc.NotificationType<ShowHotspotRuleDescriptionNotificationParams>(
             "sonarlint/showHotspotRuleDescription",
-        );
+        )
 }
 
 export interface ShowHotspotRuleDescriptionNotificationParams {
-    ruleKey: string;
-    hotspotId: string;
-    fileUri: string;
+    ruleKey: string
+    hotspotId: string
+    fileUri: string
 }
 
 export interface ShowRuleDescriptionParams {
-    key: string;
-    name: string;
-    htmlDescription: string;
+    key: string
+    name: string
+    htmlDescription: string
     htmlDescriptionTabs: Array<{
-        title: string;
+        title: string
         ruleDescriptionTabNonContextual?: {
-            htmlContent: string;
-        };
+            htmlContent: string
+        }
         ruleDescriptionTabContextual?: Array<{
-            htmlContent: string;
-            contextKey: string;
-            displayName: string;
-        }>;
-        hasContextualInformation: boolean;
-        defaultContextKey?: string;
-    }>;
-    type: string;
-    severity: string;
-    cleanCodeAttribute?: string;
-    cleanCodeAttributeCategory?: string;
-    impacts?: { [softwareQuality: string]: string };
-    languageKey: string;
-    isTaint: boolean;
+            htmlContent: string
+            contextKey: string
+            displayName: string
+        }>
+        hasContextualInformation: boolean
+        defaultContextKey?: string
+    }>
+    type: string
+    severity: string
+    cleanCodeAttribute?: string
+    cleanCodeAttributeCategory?: string
+    impacts?: { [softwareQuality: string]: string }
+    languageKey: string
+    isTaint: boolean
     parameters?: Array<{
-        name: string;
-        description: string;
-        defaultValue: string;
-    }>;
+        name: string
+        description: string
+        defaultValue: string
+    }>
 }
 
 export namespace GetJavaConfigRequest {
     export const type = new coc.RequestType<string, GetJavaConfigResponse, void>(
         "sonarlint/getJavaConfig",
-    );
+    )
 }
 
 export namespace ScmCheckRequest {
     export const type = new coc.RequestType<string, boolean, void>(
         "sonarlint/isIgnoredByScm",
-    );
+    )
 }
 
 export namespace ShowNotificationForFirstSecretsIssueNotification {
     export const type = new coc.NotificationType(
         "sonarlint/showNotificationForFirstSecretsIssue",
-    );
+    )
 }
 
 export interface GetJavaConfigResponse {
-    projectRoot: string;
-    sourceLevel: string;
-    classpath: string[];
-    isTest: boolean;
-    vmLocation: string;
+    projectRoot: string
+    sourceLevel: string
+    classpath: string[]
+    isTest: boolean
+    vmLocation: string
 }
 
 export namespace ShowSonarLintOutputNotification {
-    export const type = new coc.NotificationType("sonarlint/showSonarLintOutput");
+    export const type = new coc.NotificationType("sonarlint/showSonarLintOutput")
 }
 
 export namespace OpenJavaHomeSettingsNotification {
     export const type = new coc.NotificationType(
         "sonarlint/openJavaHomeSettings",
-    );
+    )
 }
 
 export namespace OpenPathToNodeSettingsNotification {
     export const type = new coc.NotificationType(
         "sonarlint/openPathToNodeSettings",
-    );
+    )
 }
 
 export namespace BrowseToNotification {
-    export const type = new coc.NotificationType<string>("sonarlint/browseTo");
+    export const type = new coc.NotificationType<string>("sonarlint/browseTo")
 }
 
 export namespace OpenConnectionSettingsNotification {
     export const type = new coc.NotificationType<boolean>(
         "sonarlint/openConnectionSettings",
-    );
+    )
 }
 
 export enum HotspotResolution {
@@ -176,92 +176,92 @@ export enum ExtendedHotspotStatus {
 }
 
 export interface RemoteHotspot {
-    message: string;
-    ideFilePath: string;
-    key: string;
-    textRange: TextRange;
-    author: string;
-    status: string;
-    resolution?: HotspotResolution;
+    message: string
+    ideFilePath: string
+    key: string
+    textRange: TextRange
+    author: string
+    status: string
+    resolution?: HotspotResolution
     rule: {
-        key: string;
-        name: string;
-        securityCategory: string;
-        vulnerabilityProbability: HotspotProbability;
-        riskDescription: string;
-        vulnerabilityDescription: string;
-        fixRecommendations: string;
-    };
+        key: string
+        name: string
+        securityCategory: string
+        vulnerabilityProbability: HotspotProbability
+        riskDescription: string
+        vulnerabilityDescription: string
+        fixRecommendations: string
+    }
 }
 
 export namespace ShowHotspotNotification {
     export const type = new coc.NotificationType<RemoteHotspot>(
         "sonarlint/showHotspot",
-    );
+    )
 }
 
 export namespace ShowIssueNotification {
-    export const type = new coc.NotificationType<Issue>("sonarlint/showIssue");
+    export const type = new coc.NotificationType<Issue>("sonarlint/showIssue")
 }
 
 export interface TextRange {
-    startLine: number;
-    endLine?: number;
-    startLineOffset?: number;
-    endLineOffset?: number;
+    startLine: number
+    endLine?: number
+    startLineOffset?: number
+    endLineOffset?: number
 }
 
 export interface Location {
-    uri?: string;
-    filePath: string;
-    textRange: TextRange;
-    message?: string;
-    exists: boolean;
-    codeMatches: boolean;
+    uri?: string
+    filePath: string
+    textRange: TextRange
+    message?: string
+    exists: boolean
+    codeMatches: boolean
 }
 
 export interface Flow {
-    locations: Location[];
+    locations: Location[]
 }
 
 export interface Issue {
-    fileUri: string;
-    message: string;
-    ruleKey: string;
-    connectionId?: string;
-    creationDate?: string;
-    flows: Flow[];
-    textRange: TextRange;
-    codeMatches?: boolean;
-    shouldOpenRuleDescription: boolean;
+    fileUri: string
+    message: string
+    ruleKey: string
+    connectionId?: string
+    creationDate?: string
+    flows: Flow[]
+    textRange: TextRange
+    codeMatches?: boolean
+    shouldOpenRuleDescription: boolean
 }
 
 export namespace ShowIssueOrHotspotNotification {
     export const type = new coc.NotificationType<Issue>(
         "sonarlint/showIssueOrHotspot",
-    );
+    )
 }
 
 export interface BranchNameForFolder {
-    folderUri: string;
-    branchName?: string;
+    folderUri: string
+    branchName?: string
 }
 
 export namespace SetReferenceBranchNameForFolderNotification {
     export const type = new coc.NotificationType<BranchNameForFolder>(
         "sonarlint/setReferenceBranchNameForFolder",
-    );
+    )
 }
 
 export namespace NeedCompilationDatabaseRequest {
     export const type = new coc.NotificationType(
         "sonarlint/needCompilationDatabase",
-    );
+    )
 }
 
 export interface ShouldAnalyseFileCheckResult {
-    shouldBeAnalysed: boolean;
-    reason?: string;
+    shouldBeAnalysed: boolean
+    reason?: string
 }
 
 export namespace ShouldAnalyseFileCheck {
@@ -269,36 +269,36 @@ export namespace ShouldAnalyseFileCheck {
         UriParams,
         ShouldAnalyseFileCheckResult,
         void
-    >("sonarlint/shouldAnalyseFile");
+    >("sonarlint/shouldAnalyseFile")
 }
 
 export interface FileUris {
-    fileUris: string[];
+    fileUris: string[]
 }
 
 export namespace FilterOutExcludedFiles {
     export const type = new coc.RequestType<FileUris, FileUris, void>(
         "sonarlint/filterOutExcludedFiles",
-    );
+    )
 }
 
 export interface ConnectionCheckResult {
-    connectionId: string;
-    success: boolean;
-    reason?: string;
+    connectionId: string
+    success: boolean
+    reason?: string
 }
 
 export interface ConnectionCheckParams {
-    connectionId?: string;
-    token?: string;
-    organization?: string;
-    serverUrl?: string;
+    connectionId?: string
+    token?: string
+    organization?: string
+    serverUrl?: string
 }
 
 export namespace ReportConnectionCheckResult {
     export const type = new coc.NotificationType<ConnectionCheckResult>(
         "sonarlint/reportConnectionCheckResult",
-    );
+    )
 }
 
 export namespace CheckConnection {
@@ -306,19 +306,19 @@ export namespace CheckConnection {
         ConnectionCheckParams,
         ConnectionCheckResult,
         void
-    >("sonarlint/checkConnection");
+    >("sonarlint/checkConnection")
 }
 
 export interface AnalysisFile {
-    uri: string;
-    languageId: string;
-    version: number;
-    text: string;
+    uri: string
+    languageId: string
+    version: number
+    text: string
 }
 
 export interface CheckLocalDetectionSupportedResponse {
-    isSupported: boolean;
-    reason?: string;
+    isSupported: boolean
+    reason?: string
 }
 
 export namespace CheckLocalDetectionSupported {
@@ -326,7 +326,7 @@ export namespace CheckLocalDetectionSupported {
         UriParams,
         CheckLocalDetectionSupportedResponse,
         null
-    >("sonarlint/checkLocalDetectionSupported");
+    >("sonarlint/checkLocalDetectionSupported")
 }
 
 export namespace GetHotspotDetails {
@@ -334,19 +334,19 @@ export namespace GetHotspotDetails {
         ShowHotspotRuleDescriptionNotificationParams,
         ShowRuleDescriptionParams,
         null
-    >("sonarlint/getHotspotDetails");
+    >("sonarlint/getHotspotDetails")
 }
 
 export namespace CanShowMissingRequirementNotification {
     export const type = new coc.RequestType<string, boolean, void>(
         "sonarlint/canShowMissingRequirementsNotification",
-    );
+    )
 }
 
 export namespace MaybeShowWiderLanguageSupportNotification {
     export const type = new coc.NotificationType<string[]>(
         "sonarlint/maybeShowWiderLanguageSupportNotification",
-    );
+    )
 }
 
 //#endregion
@@ -354,74 +354,74 @@ export namespace MaybeShowWiderLanguageSupportNotification {
 //#region Server side extensions to LSP
 
 export interface DidClasspathUpdateParams {
-    projectUri: string;
+    projectUri: string
 }
 
 export namespace DidClasspathUpdateNotification {
     export const type = new coc.NotificationType<DidClasspathUpdateParams>(
         "sonarlint/didClasspathUpdate",
-    );
+    )
 }
 
 export interface DidJavaServerModeChangeParams {
-    serverMode: string;
+    serverMode: string
 }
 
 export namespace DidJavaServerModeChangeNotification {
     export const type = new coc.NotificationType<DidJavaServerModeChangeParams>(
         "sonarlint/didJavaServerModeChange",
-    );
+    )
 }
 
 export interface DidLocalBranchNameChangeParams {
-    folderUri: string;
-    branchName?: string;
+    folderUri: string
+    branchName?: string
 }
 
 export namespace DidLocalBranchNameChangeNotification {
     export const type = new coc.NotificationType<DidLocalBranchNameChangeParams>(
         "sonarlint/didLocalBranchNameChange",
-    );
+    )
 }
 
-export type ConfigLevel = "on" | "off";
+export type ConfigLevel = "on" | "off"
 
 export interface Rule {
-    readonly key: string;
-    readonly name: string;
-    readonly activeByDefault: boolean;
-    levelFromConfig?: ConfigLevel;
+    readonly key: string
+    readonly name: string
+    readonly activeByDefault: boolean
+    levelFromConfig?: ConfigLevel
 }
 
 export interface RulesResponse {
-    [language: string]: Array<Rule>;
+    [language: string]: Array<Rule>
 }
 
 export namespace ListAllRulesRequest {
     export const type = new coc.RequestType0<RulesResponse, void>(
         "sonarlint/listAllRules",
-    );
+    )
 }
 
 export namespace GetTokenForServer {
     export const type = new coc.RequestType<string, string, void>(
         "sonarlint/getTokenForServer",
-    );
+    )
 }
 
 export interface TokenUpdateNotificationParams {
-    connectionId: string;
-    token: string;
+    connectionId: string
+    token: string
 }
 
 export namespace OnTokenUpdate {
     export const type = new coc.NotificationType<TokenUpdateNotificationParams>(
         "sonarlint/onTokenUpdate",
-    );
+    )
 }
 
 export interface GetRemoteProjectsForConnectionParams {
-    connectionId: string;
+    connectionId: string
 }
 
 export namespace GetRemoteProjectsForConnection {
@@ -429,12 +429,12 @@ export namespace GetRemoteProjectsForConnection {
         GetRemoteProjectsForConnectionParams,
         Map<string, string>,
         void
-    >("sonarlint/getRemoteProjectsForConnection");
+    >("sonarlint/getRemoteProjectsForConnection")
 }
 
 interface GetRemoteProjectNamesParams {
-    connectionId?: string;
-    projectKeys: Array<string>;
+    connectionId?: string
+    projectKeys: Array<string>
 }
 
 export namespace GetRemoteProjectNames {
@@ -442,15 +442,15 @@ export namespace GetRemoteProjectNames {
         GetRemoteProjectNamesParams,
         { [key: string]: string },
         null
-    >("sonarlint/getRemoteProjectNames");
+    >("sonarlint/getRemoteProjectNames")
 }
 
 export interface GenerateTokenParams {
-    baseServerUrl: string;
+    baseServerUrl: string
 }
 
 export interface GenerateTokenResponse {
-    token?: string;
+    token?: string
 }
 
 export namespace GenerateToken {
@@ -458,28 +458,28 @@ export namespace GenerateToken {
         GenerateTokenParams,
         GenerateTokenResponse,
         null
-    >("sonarlint/generateToken");
+    >("sonarlint/generateToken")
 }
 
 export interface Diagnostic extends coc.Diagnostic {
-    creationDate?: string;
-    flows: Flow[];
+    creationDate?: string
+    flows: Flow[]
 }
 
 export interface PublishHotspotsForFileParams {
-    uri: string;
-    diagnostics: Diagnostic[];
+    uri: string
+    diagnostics: Diagnostic[]
 }
 
 export namespace PublishHotspotsForFile {
     export const type = new coc.NotificationType<PublishHotspotsForFileParams>(
         "sonarlint/publishSecurityHotspots",
-    );
+    )
 }
 
 export interface ShowHotspotLocationsParams {
-    hotspotKey: string;
-    fileUri: string;
+    hotspotKey: string
+    fileUri: string
 }
 
 export namespace ShowHotspotLocations {
@@ -487,54 +487,54 @@ export namespace ShowHotspotLocations {
         ShowHotspotLocationsParams,
         null,
         null
-    >("sonarlint/showHotspotLocations");
+    >("sonarlint/showHotspotLocations")
 }
 
 export interface OpenHotspotParams {
-    hotspotId: string;
-    fileUri: string;
+    hotspotId: string
+    fileUri: string
 }
 
 export namespace OpenHotspotOnServer {
     export const type = new coc.NotificationType<OpenHotspotParams>(
         "sonarlint/openHotspotInBrowser",
-    );
+    )
 }
 
 export interface HelpAndFeedbackLinkClickedNotificationParams {
-    id: string;
+    id: string
 }
 
 export namespace HelpAndFeedbackLinkClicked {
     export const type =
         new coc.NotificationType<HelpAndFeedbackLinkClickedNotificationParams>(
             "sonarlint/helpAndFeedbackLinkClicked",
-        );
+        )
 }
 
 export interface ScanFolderForHotspotsParams {
-    folderUri: string;
-    documents: Array<coc.TextDocumentItem>;
+    folderUri: string
+    documents: Array<coc.TextDocumentItem>
 }
 
 export namespace ScanFolderForHotspots {
     export const type = new coc.NotificationType<ScanFolderForHotspotsParams>(
         "sonarlint/scanFolderForHotspots",
-    );
+    )
 }
 
 export namespace ForgetFolderHotspots {
     export const type = new coc.NotificationType(
         "sonarlint/forgetFolderHotspots",
-    );
+    )
 }
 
 export interface UriParams {
-    uri: string;
+    uri: string
 }
 
 export interface GetFilePatternsForAnalysisResponse {
-    patterns: string[];
+    patterns: string[]
 }
 
 export namespace GetFilePatternsForAnalysis {
@@ -542,18 +542,18 @@ export namespace GetFilePatternsForAnalysis {
         UriParams,
         GetFilePatternsForAnalysisResponse,
         null
-    >("sonarlint/listSupportedFilePatterns");
+    >("sonarlint/listSupportedFilePatterns")
 }
 
 export interface GetSuggestedBindingParams {
-    configScopeId: string;
-    connectionId: string;
+    configScopeId: string
+    connectionId: string
 }
 
 export interface GetSuggestedBindingResponse {
     suggestions: {
-        [folderUri: string]: Array<BindingSuggestion>;
-    };
+        [folderUri: string]: Array<BindingSuggestion>
+    }
 }
 
 export namespace GetSuggestedBinding {
@@ -561,15 +561,15 @@ export namespace GetSuggestedBinding {
         GetSuggestedBindingParams,
         GetSuggestedBindingResponse,
         null
-    >("sonarlint/getBindingSuggestion");
+    >("sonarlint/getBindingSuggestion")
 }
 
 export interface GetSharedConnectedModeConfigFileParams {
-    configScopeId: string;
+    configScopeId: string
 }
 
 export interface GetSharedConnectedModeConfigFileResponse {
-    jsonFileContent: string;
+    jsonFileContent: string
 }
 
 export namespace GetSharedConnectedModeConfigFileContents {
@@ -577,30 +577,30 @@ export namespace GetSharedConnectedModeConfigFileContents {
         GetSharedConnectedModeConfigFileParams,
         GetSharedConnectedModeConfigFileResponse,
         null
-    >("sonarlint/getSharedConnectedModeFileContent");
+    >("sonarlint/getSharedConnectedModeFileContent")
 }
 
 export namespace ReopenResolvedLocalIssues {
     export const type = new coc.NotificationType<ReopenAllIssuesForFileParams>(
         "sonarlint/reopenResolvedLocalIssues",
-    );
+    )
 }
 
 export interface ReopenAllIssuesForFileParams {
-    configurationScopeId: string;
-    relativePath: string;
-    fileUri: string;
+    configurationScopeId: string
+    relativePath: string
+    fileUri: string
 }
 
 export interface CheckIssueStatusChangePermittedParams {
-    folderUri: string;
-    issueKey: string;
+    folderUri: string
+    issueKey: string
 }
 
 export interface CheckIssueStatusChangePermittedResponse {
-    permitted: boolean;
-    notPermittedReason: string;
-    allowedStatuses: string[];
+    permitted: boolean
+    notPermittedReason: string
+    allowedStatuses: string[]
 }
 
 export namespace CheckIssueStatusChangePermitted {
@@ -608,32 +608,32 @@ export namespace CheckIssueStatusChangePermitted {
         CheckIssueStatusChangePermittedParams,
         CheckIssueStatusChangePermittedResponse,
         null
-    >("sonarlint/checkIssueStatusChangePermitted");
+    >("sonarlint/checkIssueStatusChangePermitted")
 }
 
 export namespace SetIssueStatus {
     export const type = new coc.NotificationType<SetIssueStatusParams>(
         "sonarlint/changeIssueStatus",
-    );
+    )
 }
 
 export interface SetIssueStatusParams {
-    configurationScopeId: string;
-    issueId: string;
-    newStatus: string;
-    fileUri: string;
-    comment: string;
-    isTaintIssue: boolean;
+    configurationScopeId: string
+    issueId: string
+    newStatus: string
+    fileUri: string
+    comment: string
+    isTaintIssue: boolean
 }
 
 export interface AssistCreatingConnectionParams {
-    isSonarCloud: boolean;
-    serverUrl: string;
-    token: string;
+    isSonarCloud: boolean
+    serverUrl: string
+    token: string
 }
 
 export interface AssistCreatingConnectionResponse {
-    newConnectionId: string;
+    newConnectionId: string
 }
 
 export namespace AssistCreatingConnection {
@@ -641,17 +641,17 @@ export namespace AssistCreatingConnection {
         AssistCreatingConnectionParams,
         AssistCreatingConnectionResponse,
         null
-    >("sonarlint/assistCreatingConnection");
+    >("sonarlint/assistCreatingConnection")
 }
 
 export interface AssistBindingParams {
-    connectionId: string;
-    projectKey: string;
-    isFromSharedConfiguration: boolean;
+    connectionId: string
+    projectKey: string
+    isFromSharedConfiguration: boolean
 }
 
 export interface AssistBindingResponse {
-    configurationScopeId: string;
+    configurationScopeId: string
 }
 
 export namespace AssistBinding {
@@ -659,29 +659,29 @@ export namespace AssistBinding {
         AssistBindingParams,
         AssistBindingResponse,
         null
-    >("sonarlint/assistBinding");
+    >("sonarlint/assistBinding")
 }
 
 interface ShowHotspotDetailsParams {
-    hotspotKey: string;
+    hotspotKey: string
 }
 
 export namespace ShowHotspotDetails {
     export const type = new coc.NotificationType<ShowHotspotDetailsParams>(
         "sonarlint/showHotspotDetails",
-    );
+    )
 }
 
 export interface GetAllowedHotspotStatusesResponse {
-    permitted: boolean;
-    notPermittedReason: string;
-    allowedStatuses: string[];
+    permitted: boolean
+    notPermittedReason: string
+    allowedStatuses: string[]
 }
 
 export interface GetAllowedHotspotStatusesParams {
-    fileUri: string;
-    folderUri: string;
-    hotspotKey: string;
+    fileUri: string
+    folderUri: string
+    hotspotKey: string
 }
 
 export namespace GetAllowedHotspotStatuses {
@@ -689,29 +689,29 @@ export namespace GetAllowedHotspotStatuses {
         GetAllowedHotspotStatusesParams,
         GetAllowedHotspotStatusesResponse,
         null
-    >("sonarlint/getAllowedHotspotStatuses");
+    >("sonarlint/getAllowedHotspotStatuses")
 }
 
 export interface SetHotspotStatusParams {
-    hotspotKey: string;
-    newStatus: string;
-    fileUri: string;
+    hotspotKey: string
+    newStatus: string
+    fileUri: string
 }
 
 export namespace SetHotspotStatus {
     export const type = new coc.NotificationType<SetHotspotStatusParams>(
         "sonarlint/changeHotspotStatus",
-    );
+    )
 }
 
 export interface SslCertificateConfirmationParams {
-    issuedTo: string;
-    issuedBy: string;
-    validFrom: string;
-    validTo: string;
-    sha1Fingerprint: string;
-    sha256Fingerprint: string;
-    truststorePath: string;
+    issuedTo: string
+    issuedBy: string
+    validFrom: string
+    validTo: string
+    sha1Fingerprint: string
+    sha256Fingerprint: string
+    truststorePath: string
 }
 
 export namespace SslCertificateConfirmation {
@@ -719,66 +719,66 @@ export namespace SslCertificateConfirmation {
         SslCertificateConfirmationParams,
         boolean,
         void
-    >("sonarlint/askSslCertificateConfirmation");
+    >("sonarlint/askSslCertificateConfirmation")
 }
 
 export interface AnalyseOpenFileIgnoringExcludesParams {
-    textDocument?: AnalysisFile;
-    notebookUri?: string | undefined;
-    notebookVersion?: number | undefined;
-    notebookCells?: AnalysisFile[];
+    textDocument?: AnalysisFile
+    notebookUri?: string
+    notebookVersion?: number
+    notebookCells?: AnalysisFile[]
 }
 
 export namespace AnalyseOpenFileIgnoringExcludes {
     export const type =
         new coc.NotificationType<AnalyseOpenFileIgnoringExcludesParams>(
             "sonarlint/analyseOpenFileIgnoringExcludes",
-        );
+        )
 }
 
 export interface ShowSoonUnsupportedVersionMessageParams {
-    doNotShowAgainId: string;
-    text: string;
+    doNotShowAgainId: string
+    text: string
 }
 
 export namespace ShowSoonUnsupportedVersionMessage {
     export const type =
         new coc.NotificationType<ShowSoonUnsupportedVersionMessageParams>(
             "sonarlint/showSoonUnsupportedVersionMessage",
-        );
+        )
 }
 
 export interface SubmitNewCodeDefinitionParams {
-    folderUri: string;
-    newCodeDefinitionOrMessage: string;
-    isSupported: boolean;
+    folderUri: string
+    newCodeDefinitionOrMessage: string
+    isSupported: boolean
 }
 
 export namespace SubmitNewCodeDefinition {
     export const type = new coc.NotificationType<SubmitNewCodeDefinitionParams>(
         "sonarlint/submitNewCodeDefinition",
-    );
+    )
 }
 
 export interface ConnectionSuggestion {
     connectionSuggestion: {
-        serverUrl?: string;
-        organization?: string;
-        projectKey: string;
-    };
-    isFromSharedConfiguration: boolean;
+        serverUrl?: string
+        organization?: string
+        projectKey: string
+    }
+    isFromSharedConfiguration: boolean
 }
 
 export interface SuggestConnectionParams {
     suggestionsByConfigScopeId: {
-        [folderUri: string]: Array<ConnectionSuggestion>;
-    };
+        [folderUri: string]: Array<ConnectionSuggestion>
+    }
 }
 
 export namespace SuggestConnection {
     export const type = new coc.NotificationType<SuggestConnectionParams>(
         "sonarlint/suggestConnection",
-    );
+    )
 }
 
 export enum BindingCreationMode {
@@ -790,7 +790,7 @@ export enum BindingCreationMode {
 export namespace DidCreateBinding {
     export const type = new coc.NotificationType<BindingCreationMode>(
         "sonarlint/didCreateBinding",
-    );
+    )
 }
 
 //#endregion

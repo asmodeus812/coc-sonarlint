@@ -7,5 +7,5 @@
 
 // Declare modules that don't have a @types declaration
 
-declare module "expand-home-dir";
-declare module "path-exists";
+declare module "expand-home-dir"
+declare module "path-exists"

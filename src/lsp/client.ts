@@ -4,42 +4,42 @@
  * sonarlint@sonarsource.com
  * Licensed under the LGPLv3 License. See LICENSE.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-'use strict';
+'use strict'
 
-import * as coc from "coc.nvim";
-import {ServerMode} from "../java/java";
-import {code2ProtocolConverter} from "../util/uri";
-import * as protocol from "./protocol";
-import {AnalysisFile} from "./protocol";
+import * as coc from "coc.nvim"
+import { ServerMode } from "../java/java"
+import { code2ProtocolConverter } from "../util/uri"
+import * as protocol from "./protocol"
+import { AnalysisFile } from "./protocol"
 
 export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
     listAllRules(): Thenable<protocol.RulesResponse> {
-        return this.sendRequest(protocol.ListAllRulesRequest.type);
+        return this.sendRequest(protocol.ListAllRulesRequest.type)
     }
 
     didClasspathUpdate(projectRoot: coc.Uri): void {
-        const projectUri = code2ProtocolConverter(projectRoot);
+        const projectUri = code2ProtocolConverter(projectRoot)
         this.sendNotification(protocol.DidClasspathUpdateNotification.type, {
             projectUri,
-        });
+        })
     }
 
     didJavaServerModeChange(serverMode: ServerMode) {
         this.sendNotification(protocol.DidJavaServerModeChangeNotification.type, {
             serverMode,
-        });
+        })
     }
 
     didLocalBranchNameChange(folderRoot: coc.Uri, branchName?: string) {
-        const folderUri = code2ProtocolConverter(folderRoot);
+        const folderUri = code2ProtocolConverter(folderRoot)
         this.sendNotification(protocol.DidLocalBranchNameChangeNotification.type, {
             folderUri,
             branchName,
-        });
+        })
     }
 
     checkConnection(connectionId: string) {
-        return this.sendRequest(protocol.CheckConnection.type, {connectionId});
+        return this.sendRequest(protocol.CheckConnection.type, { connectionId })
     }
 
     checkNewConnection(
@@ -48,42 +48,42 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
         isSonarQube: boolean,
     ) {
         const params = isSonarQube
-            ? {token, serverUrl: serverOrOrganization}
-            : {token, organization: serverOrOrganization};
-        return this.sendRequest(protocol.CheckConnection.type, params);
+            ? { token, serverUrl: serverOrOrganization }
+            : { token, organization: serverOrOrganization }
+        return this.sendRequest(protocol.CheckConnection.type, params)
     }
 
     getRemoteProjectNames(connectionId: string, projectKeys: Array<string>) {
         return this.sendRequest(protocol.GetRemoteProjectNames.type, {
             connectionId,
             projectKeys,
-        });
+        })
     }
 
     onTokenUpdate(connectionId: string, token: string) {
         return this.sendNotification(protocol.OnTokenUpdate.type, {
             connectionId,
             token,
-        });
+        })
     }
 
     getRemoteProjectsForConnection(connectionId: string) {
         return this.sendRequest(protocol.GetRemoteProjectsForConnection.type, {
             connectionId,
-        });
+        })
     }
 
     generateToken(
         baseServerUrl: string,
     ): Promise<protocol.GenerateTokenResponse> {
-        return this.sendRequest(protocol.GenerateToken.type, {baseServerUrl});
+        return this.sendRequest(protocol.GenerateToken.type, { baseServerUrl })
     }
 
     showHotspotLocations(hotspotKey: string, fileUri: string): void {
         this.sendRequest(protocol.ShowHotspotLocations.type, {
             hotspotKey,
             fileUri,
-        });
+        })
     }
 
     showHotspotRuleDescription(
@@ -93,29 +93,29 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
     ) {
         this.sendNotification(
             protocol.ShowHotspotRuleDescriptionNotification.type,
-            {ruleKey, hotspotId, fileUri},
-        );
+            { ruleKey, hotspotId, fileUri },
+        )
     }
 
     openHotspotOnServer(hotspotId: string, fileUri: string) {
         this.sendNotification(protocol.OpenHotspotOnServer.type, {
             hotspotId,
             fileUri,
-        });
+        })
     }
 
     helpAndFeedbackLinkClicked(itemId: string) {
         this.sendNotification(protocol.HelpAndFeedbackLinkClicked.type, {
             id: itemId,
-        });
+        })
     }
 
     scanFolderForHotspots(params: protocol.ScanFolderForHotspotsParams) {
-        this.sendNotification(protocol.ScanFolderForHotspots.type, params);
+        this.sendNotification(protocol.ScanFolderForHotspots.type, params)
     }
 
     forgetFolderHotspots() {
-        this.sendNotification(protocol.ForgetFolderHotspots.type);
+        this.sendNotification(protocol.ForgetFolderHotspots.type)
     }
 
     getFilePatternsForAnalysis(
@@ -123,7 +123,7 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
     ): Promise<protocol.GetFilePatternsForAnalysisResponse> {
         return this.sendRequest(protocol.GetFilePatternsForAnalysis.type, {
             uri: folderUri,
-        });
+        })
     }
 
     getAllowedHotspotStatuses(
@@ -135,7 +135,7 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
             hotspotKey,
             folderUri,
             fileUri,
-        });
+        })
     }
 
     getSuggestedBinding(
@@ -145,7 +145,7 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
         return this.sendRequest(protocol.GetSuggestedBinding.type, {
             configScopeId,
             connectionId,
-        });
+        })
     }
 
     getSharedConnectedModeConfigFileContent(
@@ -153,8 +153,8 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
     ): Promise<protocol.GetSharedConnectedModeConfigFileResponse> {
         return this.sendRequest(
             protocol.GetSharedConnectedModeConfigFileContents.type,
-            {configScopeId},
-        );
+            { configScopeId },
+        )
     }
 
     checkIssueStatusChangePermitted(
@@ -164,7 +164,7 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
         return this.sendRequest(protocol.CheckIssueStatusChangePermitted.type, {
             folderUri,
             issueKey,
-        });
+        })
     }
 
     changeIssueStatus(
@@ -182,7 +182,7 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
             fileUri,
             comment,
             isTaintIssue,
-        });
+        })
     }
 
     reopenResolvedLocalIssues(
@@ -194,7 +194,7 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
             configurationScopeId,
             relativePath,
             fileUri,
-        });
+        })
     }
 
     analyseOpenFileIgnoringExcludes(
@@ -214,7 +214,7 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
                     : undefined,
                 notebookCells,
             },
-        );
+        )
     }
 
     changeHotspotStatus(
@@ -226,7 +226,7 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
             hotspotKey,
             newStatus,
             fileUri,
-        });
+        })
     }
 
     checkLocalHotspotsDetectionSupported(
@@ -234,7 +234,7 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
     ): Promise<protocol.CheckLocalDetectionSupportedResponse> {
         return this.sendRequest(protocol.CheckLocalDetectionSupported.type, {
             uri: folderUri,
-        });
+        })
     }
 
     getHotspotDetails(
@@ -246,10 +246,10 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
             ruleKey,
             hotspotId,
             fileUri,
-        });
+        })
     }
 
     didCreateBinding(mode: protocol.BindingCreationMode): Promise<void> {
-        return this.sendNotification(protocol.DidCreateBinding.type, mode);
+        return this.sendNotification(protocol.DidCreateBinding.type, mode)
     }
 }

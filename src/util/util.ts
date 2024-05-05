@@ -4,131 +4,131 @@
  * sonarlint@sonarsource.com
  * Licensed under the LGPLv3 License. See LICENSE.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-'use strict';
+'use strict'
 
-import * as child_process from 'child_process';
-import * as vscode from 'coc.nvim';
-import {FileUris, ShouldAnalyseFileCheckResult} from '../lsp/protocol';
+import * as child_process from 'child_process'
+import * as coc from 'coc.nvim'
+import { FileUris, ShouldAnalyseFileCheckResult } from '../lsp/protocol'
 
-const ANALYSIS_EXCLUDES = 'sonarlint.analysisExcludesStandalone';
+const ANALYSIS_EXCLUDES = 'sonarlint.analysisExcludesStandalone'
 
 export function startedInDebugMode(process: NodeJS.Process): boolean {
-    const args = process.execArgv;
+    const args = process.execArgv
     if (args) {
-        return args.some(arg => /^--debug=?/.test(arg) || /^--debug-brk=?/.test(arg) || /^--inspect-brk=?/.test(arg));
+        return args.some(arg => /^--debug=?/.test(arg) || /^--debug-brk=?/.test(arg) || /^--inspect-brk=?/.test(arg))
     }
-    return false;
+    return false
 }
 
-export const extension = vscode.extensions.getExtensionById('SonarSource.sonarlint-vscode');
-export const packageJson = extension?.packageJSON;
-export const HOTSPOTS_FULL_SCAN_FILE_SIZE_LIMIT_BYTES = 500_000;
+export const extension = coc.extensions.getExtensionById('SonarSource.sonarlint-vscode')
+export const packageJson = extension?.packageJSON
+export const HOTSPOTS_FULL_SCAN_FILE_SIZE_LIMIT_BYTES = 500_000
 
-export let extensionPath: string;
-export let extensionContext: vscode.ExtensionContext;
+export let extensionPath: string
+export let extensionContext: coc.ExtensionContext
 
-export function setExtensionContext(context: vscode.ExtensionContext): void {
-    extensionContext = context;
-    extensionPath = extensionContext.extensionPath;
+export function setExtensionContext(context: coc.ExtensionContext): void {
+    extensionContext = context
+    extensionPath = extensionContext.extensionPath
 }
 
-export function execChildProcess(process: string, workingDirectory: string, channel?: vscode.OutputChannel) {
+export function execChildProcess(process: string, workingDirectory: string, channel?: coc.OutputChannel) {
     return new Promise<string>((resolve, reject) => {
         child_process.exec(
             process,
-            {cwd: workingDirectory, maxBuffer: 500 * 1024},
+            { cwd: workingDirectory, maxBuffer: 500 * 1024 },
             (error: Error | null, stdout: string, stderr: string) => {
                 if (channel) {
-                    let message = '';
-                    let err = false;
+                    let message = ''
+                    let err = false
                     if (stdout && stdout.length > 0) {
-                        message += stdout;
+                        message += stdout
                     }
 
                     if (stderr && stderr.length > 0) {
-                        message += stderr;
-                        err = true;
+                        message += stderr
+                        err = true
                     }
 
                     if (error) {
-                        message += error.message;
-                        err = true;
+                        message += error.message
+                        err = true
                     }
 
                     if (err) {
-                        channel.append(message);
-                        channel.show();
+                        channel.append(message)
+                        channel.show()
                     }
                 }
 
                 if (error) {
-                    reject(error);
-                    return;
+                    reject(error)
+                    return
                 }
 
                 if (stderr && stderr.length > 0) {
-                    reject(new Error(stderr));
-                    return;
+                    reject(new Error(stderr))
+                    return
                 }
 
-                resolve(stdout);
+                resolve(stdout)
             }
-        );
-    });
+        )
+    })
 }
 
 export function globPatternToRegex(globPattern: string): RegExp {
-    const commonSuffixGlobFormat = /^\*\*\/\*\.[a-z0-9]{1,6}$/;
+    const commonSuffixGlobFormat = /^\*\*\/\*\.[a-z0-9]{1,6}$/
     if (commonSuffixGlobFormat.test(globPattern)) {
-        const offsetForCommonGlobFormat = 5;
-        const suffix = globPattern.substring(offsetForCommonGlobFormat);
-        const regexStr = `\\.${suffix}$`;
-        return new RegExp(regexStr);
+        const offsetForCommonGlobFormat = 5
+        const suffix = globPattern.substring(offsetForCommonGlobFormat)
+        const regexStr = `\\.${suffix}$`
+        return new RegExp(regexStr)
     }
-    const str = String(globPattern);
-    let regex = '';
-    const charsToEscape = new Set(['.', '+', '/', '|', '$', '^', '(', ')', '=', '!', ',']);
+    const str = String(globPattern)
+    let regex = ''
+    const charsToEscape = new Set(['.', '+', '/', '|', '$', '^', '(', ')', '=', '!', ','])
     for (let i = 0; i < str.length; i++) {
-        const c = str[i];
+        const c = str[i]
         if (charsToEscape.has(c)) {
-            regex += '\\' + c;
+            regex += '\\' + c
         } else if (c === '*') {
-            const prev = str[i - 1];
-            let asteriskCount = 1;
+            const prev = str[i - 1]
+            let asteriskCount = 1
             while (str[i + 1] === '*') {
-                asteriskCount++;
-                i++;
+                asteriskCount++
+                i++
             }
-            const next = str[i + 1];
-            const dirMatcher = isDirMatcher(asteriskCount, prev, next);
+            const next = str[i + 1]
+            const dirMatcher = isDirMatcher(asteriskCount, prev, next)
             if (dirMatcher) {
-                regex += '((?:[^/]*(?:/|$))*)';
-                i++;
+                regex += '((?:[^/]*(?:/|$))*)'
+                i++
             } else {
-                regex += '([^/]*)';
+                regex += '([^/]*)'
             }
         } else if (c === '?') {
-            regex += '.';
+            regex += '.'
         } else {
-            regex += c;
+            regex += c
         }
     }
-    regex = `^${regex}$`;
-    return new RegExp(regex);
+    regex = `^${regex}$`
+    return new RegExp(regex)
 }
 
-export function getFilesNotMatchedGlobPatterns(allFiles: vscode.Uri[], globPatterns: string[]): vscode.Uri[] {
-    const masterRegex = getMasterRegex(globPatterns);
-    return allFiles.filter(f => !masterRegex.test(f.path));
+export function getFilesNotMatchedGlobPatterns(allFiles: coc.Uri[], globPatterns: string[]): coc.Uri[] {
+    const masterRegex = getMasterRegex(globPatterns)
+    return allFiles.filter(f => !masterRegex.test(f.path))
 }
 
 function isDirMatcher(asteriskCount: number, prev: string, next: string): boolean {
-    return asteriskCount > 1 && (prev === '/' || prev === undefined) && (next === '/' || next === undefined);
+    return asteriskCount > 1 && (prev === '/' || prev === undefined) && (next === '/' || next === undefined)
 }
 
 export function getMasterRegex(globPatterns: string[]) {
-    const regexes = globPatterns.map(p => globPatternToRegex(p).source);
-    return new RegExp(regexes.join('|'), 'i');
+    const regexes = globPatterns.map(p => globPatternToRegex(p).source)
+    return new RegExp(regexes.join('|'), 'i')
 }
 
 export function shouldBeIgnored(_: string): boolean {
@@ -136,29 +136,29 @@ export function shouldBeIgnored(_: string): boolean {
 }
 
 export function shouldAnalyseFile(fileUriStr: string): ShouldAnalyseFileCheckResult {
-    const isOpen = isOpenInEditor(fileUriStr);
+    const isOpen = isOpenInEditor(fileUriStr)
     if (!isOpen) {
-        return {shouldBeAnalysed: false, reason: 'Skipping analysis for the file preview: '};
+        return { shouldBeAnalysed: false, reason: 'Skipping analysis for the file preview: ' }
     }
-    const fileUri = vscode.Uri.parse(fileUriStr);
-    const workspaceFolderConfig = vscode.workspace.getConfiguration();
-    const excludes: string | undefined = workspaceFolderConfig.get(ANALYSIS_EXCLUDES);
-    const excludesArray = excludes?.split(',').map(it => it.trim());
-    const filteredFile = getFilesNotMatchedGlobPatterns([fileUri], excludesArray || []);
-    return {shouldBeAnalysed: filteredFile.length === 1, reason: 'Skipping analysis for the excluded file: '};
+    const fileUri = coc.Uri.parse(fileUriStr)
+    const workspaceFolderConfig = coc.workspace.getConfiguration()
+    const excludes: string | undefined = workspaceFolderConfig.get(ANALYSIS_EXCLUDES)
+    const excludesArray = excludes?.split(',').map(it => it.trim())
+    const filteredFile = getFilesNotMatchedGlobPatterns([fileUri], excludesArray ?? [])
+    return { shouldBeAnalysed: filteredFile.length === 1, reason: 'Skipping analysis for the excluded file: ' }
 }
 
 export function filterOutFilesIgnoredForAnalysis(fileUris: string[]): FileUris {
-    const workspaceFolderConfig = vscode.workspace.getConfiguration();
-    const excludes: string | undefined = workspaceFolderConfig.get(ANALYSIS_EXCLUDES);
-    const excludesArray = excludes?.split(',').map(it => it.trim());
-    const filteredFiles = getFilesNotMatchedGlobPatterns(fileUris.map(it => vscode.Uri.parse(it)), excludesArray || [])
-        .map(it => it.toString());
-    return {fileUris: filteredFiles};
+    const workspaceFolderConfig = coc.workspace.getConfiguration()
+    const excludes: string | undefined = workspaceFolderConfig.get(ANALYSIS_EXCLUDES)
+    const excludesArray = excludes?.split(',').map(it => it.trim())
+    const filteredFiles = getFilesNotMatchedGlobPatterns(fileUris.map(it => coc.Uri.parse(it)), excludesArray ?? [])
+        .map(it => it.toString())
+    return { fileUris: filteredFiles }
 }
 
 function isOpenInEditor(fileUri: string) {
-    const url = vscode.Uri.parse(fileUri);
-    const codeFileUri = url.toString();
-    return vscode.workspace.textDocuments.some(d => d.uri.toString() === codeFileUri);
+    const url = coc.Uri.parse(fileUri)
+    const codeFileUri = url.toString()
+    return coc.workspace.textDocuments.some(d => d.uri.toString() === codeFileUri)
 }

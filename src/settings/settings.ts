@@ -4,7 +4,7 @@
  * sonarlint@sonarsource.com
  * Licensed under the LGPLv3 License. See LICENSE.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-'use strict';
+'use strict'
 
 import {
     commands,
@@ -12,19 +12,19 @@ import {
     WorkspaceConfiguration,
     window,
     workspace,
-} from "coc.nvim";
+} from "coc.nvim"
 
-let currentConfig: WorkspaceConfiguration;
+let currentConfig: WorkspaceConfiguration
 
-export const SONARLINT_CATEGORY = "sonarlint";
-export const VERBOSE_LOGS = "output.showVerboseLogs";
+export const SONARLINT_CATEGORY = "sonarlint"
+export const VERBOSE_LOGS = "output.showVerboseLogs"
 
 export function getSonarLintConfiguration(): WorkspaceConfiguration {
-    return workspace.getConfiguration(SONARLINT_CATEGORY);
+    return workspace.getConfiguration(SONARLINT_CATEGORY)
 }
 
 export function isVerboseEnabled(): boolean {
-    return getCurrentConfiguration()?.get(VERBOSE_LOGS, false);
+    return getCurrentConfiguration()?.get(VERBOSE_LOGS, false)
 }
 
 export function enableVerboseLogs() {
@@ -32,43 +32,43 @@ export function enableVerboseLogs() {
         VERBOSE_LOGS,
         true,
         ConfigurationTarget.Global,
-    );
-    window.showInformationMessage("Verbose logging enabled.");
+    )
+    window.showInformationMessage("Verbose logging enabled.")
 }
 
 export function loadInitialSettings() {
-    currentConfig = getSonarLintConfiguration();
+    currentConfig = getSonarLintConfiguration()
 }
 
 export function getCurrentConfiguration() {
-    return currentConfig;
+    return currentConfig
 }
 
 export function onConfigurationChange() {
     return workspace.onDidChangeConfiguration((event) => {
         if (!event.affectsConfiguration("sonarlint")) {
-            return;
+            return
         }
-        const newConfig = getSonarLintConfiguration();
+        const newConfig = getSonarLintConfiguration()
 
         const sonarLintLsConfigChanged = hasSonarLintLsConfigChanged(
             currentConfig,
             newConfig,
-        );
+        )
 
         if (sonarLintLsConfigChanged) {
             const msg =
-                "SonarLint Language Server configuration changed, please restart VS Code.";
-            const action = "Restart Now";
-            const restartId = "workbench.action.reloadWindow";
-            currentConfig = newConfig;
+                "SonarLint Language Server configuration changed, please restart VS Code."
+            const action = "Restart Now"
+            const restartId = "workbench.action.reloadWindow"
+            currentConfig = newConfig
             window.showWarningMessage(msg, action).then((selection) => {
                 if (action === selection) {
-                    commands.executeCommand(restartId);
+                    commands.executeCommand(restartId)
                 }
-            });
+            })
         }
-    });
+    })
 }
 
 function hasSonarLintLsConfigChanged(
@@ -78,7 +78,7 @@ function hasSonarLintLsConfigChanged(
     return (
         !configKeyEquals("ls.javaHome", oldConfig, newConfig) ||
         !configKeyEquals("ls.vmargs", oldConfig, newConfig)
-    );
+    )
 }
 
 function configKeyEquals(
@@ -86,5 +86,5 @@ function configKeyEquals(
     oldConfig: WorkspaceConfiguration,
     newConfig: WorkspaceConfiguration,
 ) {
-    return oldConfig.get(key) === newConfig.get(key);
+    return oldConfig.get(key) === newConfig.get(key)
 }

@@ -9,8 +9,6 @@
 import * as coc from "coc.nvim"
 import { ConfigLevel, Rule, RulesResponse } from "../lsp/protocol"
 import { getSonarLintConfiguration } from "../settings/settings"
-import { Commands } from "../util/commands"
-import { logToSonarLintOutput } from 'coc-sonarlint/src/util/logging'
 
 function isActive(rule: Rule) {
     return (
@@ -129,7 +127,7 @@ export class AllRulesTreeDataProvider
                             .sort()
                             .map(
                                 (language) =>
-                                    new LanguageNode(language, this.allRootsStates.get(language.toLowerCase()) || coc.TreeItemCollapsibleState.Collapsed),
+                                    new LanguageNode(language, this.allRootsStates.get(language.toLowerCase()) ?? coc.TreeItemCollapsibleState.Collapsed),
                             )
                     }
                 })
@@ -230,27 +228,12 @@ export function toggleRule(level?: string) {
                 // Back to default
                 delete rules[key]
             }
-            coc.window.showWarningMessage(`Changed l of rule ${key} to ${localLevel}`)
+            coc.window.showWarningMessage(`Changed level of rule ${key} to ${localLevel}`)
             return await configuration.update(
                 "rules",
                 rules,
                 coc.ConfigurationTarget.Global,
             )
         }
-    }
-}
-
-async function notifyOnRuleDeactivation(ruleKey: string) {
-    const undoAction = "Decline update"
-    const showAllRulesAction = "Show rule"
-    const selectedAction = await coc.window.showInformationMessage(
-        `Sonar rule ${ruleKey} is now disabled in your local environment`,
-        undoAction,
-        showAllRulesAction,
-    )
-    if (selectedAction === undoAction) {
-        toggleRule("on")(ruleKey)
-    } else if (selectedAction === showAllRulesAction) {
-        await coc.commands.executeCommand(Commands.OPEN_RULE_BY_KEY, ruleKey)
     }
 }
