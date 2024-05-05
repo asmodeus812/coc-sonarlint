@@ -8,6 +8,7 @@
 
 import * as child_process from 'child_process'
 import * as coc from 'coc.nvim'
+import path from 'path'
 import { FileUris, ShouldAnalyseFileCheckResult } from '../lsp/protocol'
 
 const ANALYSIS_EXCLUDES = 'sonarlint.analysisExcludesStandalone'
@@ -129,6 +130,10 @@ function isDirMatcher(asteriskCount: number, prev: string, next: string): boolea
 export function getMasterRegex(globPatterns: string[]) {
     const regexes = globPatterns.map(p => globPatternToRegex(p).source)
     return new RegExp(regexes.join('|'), 'i')
+}
+
+export function resolveExtensionFile(...segments: string[]) {
+  return coc.Uri.file(path.join(extensionPath, ...segments));
 }
 
 export function shouldBeIgnored(_: string): boolean {
