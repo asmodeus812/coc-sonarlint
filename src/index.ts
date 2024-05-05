@@ -76,11 +76,10 @@ async function runJavaServer(
             return new Promise<StreamInfo>((resolve, reject) => {
                 const { command, args }: any = languageServerCommand(context, requirements)
                 if (!command) {
-                    reject(undefined)
+                    reject(new Error("Failed to resolve launch command and args"))
                     return
                 }
                 logToSonarLintOutput(`Executing ${command} ${args.join(" ")}`)
-                window.showInformationMessage("Sonarlint server is starting...")
                 const process = ChildProcess.spawn(command, args)
 
                 process.stderr.on("data", function(data) {
@@ -275,13 +274,13 @@ function installCustomRequestHandlers(context: coc.ExtensionContext) {
         getJavaConfig(languageClient, fileUri),
     )
     languageClient.onRequest(protocol.ScmCheckRequest.type, (params) =>
-        util.shouldBeIgnored(params),
-    )
-    languageClient.onRequest(protocol.ShouldAnalyseFileCheck.type, (params) =>
-        util.shouldAnalyseFile(params.uri),
+        util.shouldIgnoreBySourceControl(params),
     )
     languageClient.onRequest(protocol.FilterOutExcludedFiles.type, (params) =>
         util.filterOutFilesIgnoredForAnalysis(params.fileUris),
+    )
+    languageClient.onRequest(protocol.ShouldAnalyseFileCheck.type, (params) =>
+        util.shouldAnalyseFile(params.uri),
     )
     languageClient.onRequest(
         protocol.CanShowMissingRequirementNotification.type, () => { return true })

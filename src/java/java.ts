@@ -99,7 +99,7 @@ function isJavaApiRecentEnough(apiVersion: string): boolean {
     }
     if (!javaApiTooLowAlreadyLogged) {
         logToSonarLintOutput(
-            `SonarLint requires VSCode Java extension 0.56 or greater to enable analysis of Java files`,
+            `SonarLint requires coc-java extension 0.56 or greater to enable analysis of Java files`,
         )
         javaApiTooLowAlreadyLogged = true
     }

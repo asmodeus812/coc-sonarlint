@@ -9,7 +9,6 @@ import * as md from "node-html-markdown"
 import { clean, escapeHtml } from '../util/webview'
 import { ShowRuleDescriptionParams } from "../lsp/protocol"
 import { highlightAllCodeSnippetsInDesc } from './syntax-highlight'
-import { logToSonarLintOutput } from 'coc-sonarlint/src/util/logging'
 const generatedRulesDescriptions: Map<string, string> = new Map()
 
 export function showRuleDescription(factory: coc.FloatFactory) {
@@ -17,7 +16,6 @@ export function showRuleDescription(factory: coc.FloatFactory) {
         if (!generatedRulesDescriptions.has(params.key)) {
             const text = computeRuleDescPanelContent(params)
             generatedRulesDescriptions.set(params.key, text)
-            logToSonarLintOutput(text)
         }
         const content: string = generatedRulesDescriptions.get(params.key) ?? ""
         factory.show([
@@ -63,7 +61,7 @@ function renderImpact(softwareQuality: string, severity: string) {
     const softwareQualityLowerCase = softwareQuality.toLocaleLowerCase('en-us')
     const impactSeverityLowerCase = severity.toLocaleLowerCase('en-us')
     const formattedImpact = `Issues found for this rule will have a ${impactSeverityLowerCase} impact on the ${softwareQualityLowerCase} of your software.`
-    return `<div><span>${softwareQualityLowerCase}</span></div>`
+    return `<div><span>${formattedImpact}</span></div>`
 }
 
 function renderTaxonomyInfo(rule: ShowRuleDescriptionParams) {
@@ -114,7 +112,6 @@ export function renderHotspotBanner(rule: ShowRuleDescriptionParams) {
 }
 
 export function renderRuleDescription(rule: ShowRuleDescriptionParams) {
-    logToSonarLintOutput(JSON.stringify(rule))
     if (rule.htmlDescriptionTabs.length === 0) {
         const newDesc = highlightAllCodeSnippetsInDesc(rule.htmlDescription, rule.languageKey)
         return `<div>${newDesc}</div>`

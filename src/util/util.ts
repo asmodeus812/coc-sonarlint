@@ -8,7 +8,6 @@
 
 import * as child_process from 'child_process'
 import * as coc from 'coc.nvim'
-import path from 'path'
 import { FileUris, ShouldAnalyseFileCheckResult } from '../lsp/protocol'
 
 const ANALYSIS_EXCLUDES = 'sonarlint.analysisExcludesStandalone'
@@ -132,11 +131,7 @@ export function getMasterRegex(globPatterns: string[]) {
     return new RegExp(regexes.join('|'), 'i')
 }
 
-export function resolveExtensionFile(...segments: string[]) {
-  return coc.Uri.file(path.join(extensionPath, ...segments));
-}
-
-export function shouldBeIgnored(_: string): boolean {
+export function shouldIgnoreBySourceControl(_: string): boolean {
     return false
 }
 

@@ -11,10 +11,12 @@ import expandHomeDir from "expand-home-dir"
 import findJavaHome from "find-java-home"
 import * as fse from "fs-extra"
 import * as path from "path"
+import * as jre from '../java/jre'
 import pathExists from "path-exists"
 import * as coc from "coc.nvim"
 import { Commands } from "./commands"
 import { logToSonarLintOutput } from "./logging"
+import { PlatformInformation } from 'coc-sonarlint/src/util/platform'
 
 const REQUIRED_JAVA_VERSION = 17
 
@@ -44,14 +46,14 @@ export async function resolveRequirements(
             if (pathExists.sync(path.resolve(javaHome, JAVA_FILENAME))) {
                 msg = `'bin' should be removed from the ${source} (${javaHome})`
             } else {
-                msg = `The ${source} (${javaHome}) does not point to a JRE. Will try to use embedded JRE.`
+                msg = `The ${source} (${javaHome}) does not point to a JRE`
             }
             logToSonarLintOutput(msg)
             tryResolveJre = true
         }
     }
     if (!javaHome || tryResolveJre) {
-        const jreDir = path.join(context.extensionPath, "jre")
+        const jreDir = path.join(__dirname, "../jre")
         if (fse.existsSync(jreDir) && fse.statSync(jreDir).isDirectory()) {
             const dirs = fse.readdirSync(jreDir)
             const javaDir = dirs[0]
@@ -88,11 +90,9 @@ function checkJavaRuntime(): Promise<string> {
             resolve(javaHome)
         }
 
-        // No settings let's try to detect
         findJavaHome((err, home) => {
             if (err || !home) {
-                // No Java detected, last resort is to ask for permission to download and manage our own
-                suggestManagedJre(reject)
+                installManagedJre(resolve, reject)
             } else {
                 resolve(home)
             }
@@ -132,7 +132,7 @@ function checkJavaVersion(javaHome: string): Promise<number> {
                 openJREDownload(
                     reject,
                     `Java ${REQUIRED_JAVA_VERSION} or more recent is required to run.
-Please download and install a recent JRE.`,
+                                            Please download and install a recent JRE.`,
                 )
             } else {
                 resolve(javaVersion)
@@ -163,16 +163,6 @@ export function parseMajorVersion(content: string): number {
     return javaVersion
 }
 
-function suggestManagedJre(reject: any) {
-    reject({
-        message: `The Java Runtime Environment can not be located. Please install a JRE, or configure its path with the
-      ${JAVA_HOME_CONFIG} property. You can also let SonarLint download the JRE from AdoptOpenJDK. This JRE will be
-      used only by SonarLint.`,
-        label: "Let SonarLint download the JRE",
-        command: Commands.INSTALL_MANAGED_JRE,
-    })
-}
-
 function openJREDownload(reject: any, cause: string) {
     const jreUrl =
         "https://www.oracle.com/technetwork/java/javase/downloads/index.html"
@@ -197,4 +187,36 @@ function invalidJavaHome(reject: any, cause: string) {
             message: cause,
         })
     }
+}
+
+function installManagedJre(resolve: any, reject: any) {
+    return coc.window.withProgress(
+        { cancellable: true, title: 'SonarLint jre install' },
+        (progress, cancelToken) => {
+            return PlatformInformation.GetPlatformInformation()
+                .then(platformInfo => {
+                    const options = {
+                        os: platformInfo.os as jre.Os,
+                        architecture: platformInfo.arch as jre.Architecture,
+                        version: REQUIRED_JAVA_VERSION as jre.Version
+                    }
+                    progress.report({ message: 'Downloading' })
+                    return jre.download(options, path.join(__dirname, '..', 'jre'))
+                })
+                .then(downloadResponse => {
+                    progress.report({ message: 'Uncompressing' })
+                    return jre.unzip(downloadResponse)
+                })
+                .then(jreInstallDir => {
+                    progress.report({ message: 'Done' })
+                    coc.workspace
+                        .getConfiguration('sonarlint.ls')
+                        .update('javaHome', jreInstallDir, coc.ConfigurationTarget.Global)
+                    resolve(jreInstallDir)
+                })
+                .catch(err => {
+                    reject(err)
+                })
+        }
+    )
 }

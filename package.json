@@ -1,6 +1,6 @@
 {
     "name": "coc-sonarlint",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "description": "sonarlint for coc.nvim",
     "author": "asmodeus812 <svetlozar321@gmail.com>",
     "license": "MIT",
@@ -38,7 +38,9 @@
         "expand-home-dir": "^0.0.3",
         "find-java-home": "1.2.2",
         "fs-extra": "^8.1.0",
-        "path-exists": "4.0.0"
+        "path-exists": "4.0.0",
+        "inly": "4.0.8",
+        "follow-redirects": "^1.15.6"
     },
     "activationEvents": [
         "onLanguage:c",

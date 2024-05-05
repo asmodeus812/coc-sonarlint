@@ -7,7 +7,7 @@
 import { parse } from 'node-html-parser'
 import { logToSonarLintOutput } from '../util/logging'
 
-function getNonDiffCodeSnippetsToHighlight(doc) {
+function getNonDiffCodeSnippetsToHighlight(doc: any) {
     return doc.querySelectorAll(`pre`)
 }
 
@@ -38,7 +38,6 @@ export function highlightAllCodeSnippetsInDesc(htmlDescription: string, ruleLang
     const language = `language-${languageKey}`
 
     try {
-        logToSonarLintOutput(preTagsNoDiff)
         preTagsNoDiff.forEach((pre: any) => {
             pre.innerHTML = `<code class="${language}">${pre}</code>`
         })
