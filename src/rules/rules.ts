@@ -9,6 +9,7 @@
 import * as coc from "coc.nvim"
 import { ConfigLevel, Rule, RulesResponse } from "../lsp/protocol"
 import { getSonarLintConfiguration } from "../settings/settings"
+import { capitalizeName } from "coc-sonarlint/src/util/webview"
 
 function isActive(rule: Rule) {
     return (
@@ -24,15 +25,18 @@ function actualLevel(rule: Rule) {
 export class LanguageNode extends coc.TreeItem {
     constructor(label: string, state: coc.TreeItemCollapsibleState) {
         super(label, state)
-        this.id = label.toLowerCase()
+        this.id = userNormalizedLanguageKey(label)
+        this.id = this.id.toLowerCase()
         this.tooltip = `Rules applicable for ${label} language`
     }
 }
 
 export class RuleNode extends coc.TreeItem {
-    constructor(public readonly rule: Rule, public readonly language?: string) {
+    constructor(public readonly rule: Rule, public readonly language: string) {
         super(rule.name)
         this.id = rule.key.toLowerCase()
+        this.language = userNormalizedLanguageKey(this.language)
+        this.language = this.language.toLowerCase()
         this.tooltip = `Toggle rule ${rule.key} status`
         this.description = `${rule.key} - ${actualLevel(rule)}`
         this.command = {
@@ -66,9 +70,9 @@ export class AllRulesTreeDataProvider
     ) {}
 
     public async getTreeItem(node: AllRulesNode) {
-        if (node instanceof RuleNode && node.id && this.allChildren.has(node.id)) {
-            return this.allChildren.get(node.id)?.find(n => n.id == node.id) as RuleNode
-        } else if (node instanceof LanguageNode && this.allRoots.length > 0) {
+        if (node instanceof RuleNode && node.language && this.allChildren.has(node.language)) {
+            return this.allChildren.get(node.language)?.find(n => n.id == node.id) as RuleNode
+        } else if (node instanceof LanguageNode && node.id && this.allRoots.length > 0) {
             return this.allRoots?.find(n => n.id == node.id) as LanguageNode
         } else {
             return node
@@ -105,7 +109,7 @@ export class AllRulesTreeDataProvider
                 .then((response) => {
                     if (node) {
                         // Render rules under language nodes
-                        return response[node.label as string]
+                        return response[userNormalizedLanguageKey(node.label as string)]
                             .sort(byName)
                             .map((rule) => {
                                 rule.levelFromConfig = localRuleConfig.get(rule.key, {})["level"]
@@ -168,6 +172,7 @@ export class AllRulesTreeDataProvider
             this.allRootsStates.set(element.id, element.collapsibleState)
         }
     }
+
 }
 
 function byName(r1: Rule, r2: Rule) {
@@ -235,5 +240,87 @@ export function toggleRule(level?: string) {
                 coc.ConfigurationTarget.Global,
             )
         }
+    }
+}
+
+export function userNormalizedLanguageKey(sonarLanguageKey: string): string {
+    switch (sonarLanguageKey) {
+        case 'markdown':
+            return 'Secrets'
+        case 'css':
+        case 'scss':
+        case 'Css':
+        case 'Scss':
+            return 'CSS'
+        case 'htm':
+        case 'htmx':
+        case 'html':
+        case 'Html':
+            return 'HTML'
+        case 'js':
+        case 'javascript':
+            return 'JavaScript'
+        case 'ts':
+        case 'typescript':
+            return 'TypeScript'
+        case 'py':
+        case 'python':
+            return 'Python'
+        case 'ipy':
+        case 'ipynb':
+        case 'ipython':
+            return 'IPython Notebooks'
+        case 'arm':
+        case 'azure':
+        case 'azureresmgr':
+        case 'azureresource':
+        case 'azureresourcemanager':
+            return 'AzureResourceManager'
+        case 'cpp':
+        case 'cplus':
+        case 'cplusplus':
+            return 'C++'
+        case 'k8s':
+        case 'yml':
+        case 'yaml':
+            return 'Kubernetes'
+        default:
+            return capitalizeName(sonarLanguageKey)
+    }
+}
+
+export function languageKeyDeNormalization(sonarLanguageKey: string): string {
+    switch (sonarLanguageKey) {
+        case 'c++':
+        case 'C++':
+        case 'cplus':
+        case 'cplusplus':
+            return 'cpp'
+        case 'scss':
+        case 'Scss':
+            return 'css'
+        case 'htm':
+        case 'htmx':
+            return 'HTML'
+        case 'js':
+            return 'JavaScript'
+        case 'ts':
+            return 'TypeScript'
+        case 'py':
+            return 'Python'
+        case 'ipy':
+        case 'ipynb':
+            return 'ipython'
+        case 'arm':
+        case 'azure':
+        case 'azureresmgr':
+        case 'azureresource':
+            return 'azureresourcemanager'
+        case 'k8s':
+        case 'yml':
+        case 'yaml':
+            return 'kubernetes'
+        default:
+            return sonarLanguageKey.toLowerCase()
     }
 }

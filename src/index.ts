@@ -31,6 +31,7 @@ import {
     AllRulesTreeDataProvider,
     LanguageNode,
     RuleNode,
+    languageKeyDeNormalization,
     toggleRule,
 } from "./rules/rules"
 import { getJavaConfig, installClasspathListener } from "./java/java"
@@ -53,7 +54,7 @@ const DOCUMENT_SELECTOR = [
 
 let languageClient: SonarLintExtendedLanguageClient
 let allRulesTreeDataProvider: AllRulesTreeDataProvider
-let allRulesView: coc.TreeView<LanguageNode> | undefined
+let allRulesView: coc.TreeView<LanguageNode>
 let floatDescriptionFactory: coc.FloatFactory
 
 async function runJavaServer(
@@ -148,6 +149,17 @@ export async function activate(context: ExtensionContext): Promise<void> {
         () => languageClient.listAllRules(),
         new Map(),
     )
+    allRulesView = coc.window.createTreeView("Sonarlint rules", {
+        bufhidden: 'hide',
+        treeDataProvider: allRulesTreeDataProvider,
+    })
+    allRulesView.onDidCollapseElement((n) => {
+        allRulesTreeDataProvider.register(n.element)
+    })
+    allRulesView.onDidExpandElement((n) => {
+        allRulesTreeDataProvider.register(n.element)
+    })
+    context.subscriptions.push(allRulesView)
 
     floatDescriptionFactory = window.createFloatFactory({
         preferTop: true,
@@ -195,19 +207,19 @@ function registerCommands(context: coc.ExtensionContext) {
     context.subscriptions.push(
         coc.commands.registerCommand(Commands.SHOW_ALL_RULES, async () => {
             allRulesTreeDataProvider.filter()
-            await prepareRulesTreeView("Displaying all rules")
+            await showRulesView("Sonarlint all rules")
         }),
     )
     context.subscriptions.push(
         coc.commands.registerCommand(Commands.SHOW_ACTIVE_RULES, async () => {
             allRulesTreeDataProvider.filter("on")
-            await prepareRulesTreeView("Displaying active rules")
+            await showRulesView("Sonarlint active rules")
         }),
     )
     context.subscriptions.push(
         coc.commands.registerCommand(Commands.SHOW_INACTIVE_RULES, async () => {
             allRulesTreeDataProvider.filter("off")
-            await prepareRulesTreeView("Displaying inactive rules")
+            await showRulesView("Sonarlint inactive rules")
         }),
     )
 
@@ -215,14 +227,33 @@ function registerCommands(context: coc.ExtensionContext) {
         coc.commands.registerCommand(
             Commands.OPEN_RULE_BY_KEY,
             async (ruleKey: string) => {
-                await prepareRulesTreeView(`Displaying rules for ${ruleKey}`)
-                const type = ruleKey.indexOf(":") >= 0
-                    ? new RuleNode({ key: ruleKey.toLowerCase() } as protocol.Rule)
-                    : new LanguageNode(ruleKey.toLowerCase(), coc.TreeItemCollapsibleState.Collapsed)
-                const node = await allRulesTreeDataProvider.getTreeItem(type)
-                node.collapsibleState = coc.TreeItemCollapsibleState.Expanded
-                allRulesTreeDataProvider.register(node)
-                await allRulesView?.reveal(node, { select: true, focus: true, expand: true })
+                if (!ruleKey || ruleKey.length == 0) {
+                    coc.window.showWarningMessage(`Provided rule key was emtpy or was invalid`)
+                    return
+                }
+                allRulesTreeDataProvider.filter()
+                await showRulesView(`Sonarlint rules for rule ${ruleKey}`)
+                const indexOfSeparator = ruleKey.indexOf(":")
+                const language = indexOfSeparator > 0 ? ruleKey.substring(0, indexOfSeparator) : null
+                const type = indexOfSeparator > 0 && language
+                    ? new RuleNode({ key: languageKeyDeNormalization(language) + ":" + ruleKey.substring(indexOfSeparator + 1).toLowerCase() } as protocol.Rule, language)
+                    : new LanguageNode(ruleKey, coc.TreeItemCollapsibleState.Collapsed)
+                let node = await allRulesTreeDataProvider.getTreeItem(type)
+                if (type instanceof RuleNode && language) {
+                    const pnode = new LanguageNode(language.toLowerCase(), coc.TreeItemCollapsibleState.Expanded)
+                    allRulesTreeDataProvider.register(pnode)
+                    if (node === type) {
+                        await allRulesTreeDataProvider.getChildren(pnode)
+                        node = await allRulesTreeDataProvider.getTreeItem(type)
+                    }
+                    await allRulesView?.reveal(node, { select: true, focus: true, expand: true })
+                } else if (type instanceof LanguageNode) {
+                    node.collapsibleState = coc.TreeItemCollapsibleState.Expanded
+                    allRulesTreeDataProvider.register(node)
+                    await allRulesView?.reveal(node, { select: true, focus: true, expand: true })
+                } else {
+                    coc.window.showWarningMessage(`Unable to find or resolve rule id ${ruleKey}`)
+                }
             },
         ),
     )
@@ -354,24 +385,7 @@ export function deactivate(): Thenable<void> | undefined {
     return languageClient.stop()
 }
 
-export async function prepareRulesTreeView(title: string) {
-    if (!allRulesView) {
-        allRulesView = coc.window.createTreeView(title, {
-            treeDataProvider: allRulesTreeDataProvider,
-        })
-        allRulesView.onDidCollapseElement((n) => {
-            allRulesTreeDataProvider.register(n.element)
-        })
-        allRulesView.onDidExpandElement((n) => {
-            allRulesTreeDataProvider.register(n.element)
-        })
-        allRulesView.onDidChangeVisibility((e) => {
-            if (!e.visible) {
-                allRulesView?.dispose()
-                allRulesView = undefined
-            }
-        })
-    }
+export async function showRulesView(title: string) {
     allRulesView.title = title
     if (!allRulesView.visible) {
         await allRulesView?.show()
@@ -399,3 +413,4 @@ export function toUrl(filePath: string) {
 
     return encodeURI("file://" + pathName)
 }
+
