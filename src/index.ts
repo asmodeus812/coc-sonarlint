@@ -23,7 +23,7 @@ import {
 } from "./util/logging"
 import { setExtensionContext } from "./util/util"
 import { languageServerCommand } from "./lsp/server"
-import { JAVA_HOME_CONFIG, resolveRequirements } from "./util/requirements"
+import { JAVA_HOME_CONFIG, installManagedJre, resolveRequirements } from "./util/requirements"
 import { SonarLintExtendedLanguageClient } from "./lsp/client"
 import { getPlatform } from "./util/platform"
 import { Commands } from "./util/commands"
@@ -294,6 +294,19 @@ function registerCommands(context: coc.ExtensionContext) {
             enableVerboseLogs(),
         ),
     )
+
+    context.subscriptions.push(
+        coc.commands.registerCommand(Commands.INSTALL_MANAGED_JRE, () => {
+            installManagedJre(context, function() {
+                coc.window
+                    .showInformationMessage(`Downloaded & installed a managed jre`)
+            }, function() {
+                coc.window
+                    .showErrorMessage(`Unable to download managed jre`)
+            })
+        })
+    )
+
 }
 
 function installCustomRequestHandlers(context: coc.ExtensionContext) {

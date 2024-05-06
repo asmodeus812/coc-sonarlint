@@ -1,6 +1,6 @@
 {
     "name": "coc-sonarlint",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "description": "sonarlint for coc.nvim",
     "author": "asmodeus812 <svetlozar321@gmail.com>",
     "license": "MIT",
@@ -39,8 +39,7 @@
         "find-java-home": "1.2.2",
         "fs-extra": "^8.1.0",
         "path-exists": "4.0.0",
-        "inly": "4.0.8",
-        "follow-redirects": "^1.15.6"
+        "jdk-utils": "^0.5.1"
     },
     "activationEvents": [
         "onLanguage:c",
@@ -420,6 +419,11 @@
             {
                 "command": "SonarLint.EnableVerboseLogs",
                 "title": "Enable Verbose Logging",
+                "category": "SonarLint"
+            },
+            {
+                "command": "SonarLint.InstallManagedJre",
+                "title": "Install the managed java runtime binaries",
                 "category": "SonarLint"
             },
             {

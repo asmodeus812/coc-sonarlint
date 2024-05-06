@@ -1,120 +1,83 @@
-/* --------------------------------------------------------------------------------------------
- * SonarLint for VisualStudio Code
- * Copyright (C) 2017-2024 SonarSource SA
- * sonarlint@sonarsource.com
- * Licensed under the LGPLv3 License. See LICENSE.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
-import * as followRedirects from 'follow-redirects'
-import * as fs from 'fs'
+import { ExtensionContext, download, window } from 'coc.nvim'
+import { getRuntime, JAVAC_FILENAME } from 'jdk-utils'
+import * as fse from 'fs-extra'
 import * as path from 'path'
-import * as inly from 'inly'
+import * as os from 'os'
 
-const https = followRedirects.https
+const JRE_VERSION = '17.0.8'
 
-const ADOPT_OPEN_JDK_API_ROOT = 'https://api.adoptopenjdk.net/v2'
-
-type RequestType = 'info' | 'binary' | 'latestAssets'
-type ReleaseType = 'releases' | 'nightly'
-export type Version = 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21
-type Implementation = 'hotspot' | 'openj9'
-export type Os = 'windows' | 'linux' | 'mac' | 'solaris' | 'aix'
-export type Architecture = 'x64' | 'x32' | 'ppc64' | 's390x' | 'ppc64le' | 'aarch64' | 'arm'
-type BinaryType = 'jdk' | 'jre'
-type HeapSize = 'normal' | 'large'
-
-interface Options {
-    request?: RequestType
-    release?: ReleaseType
-    version?: Version
-    implementation?: Implementation
-    os: Os
-    architecture: Architecture
-    binary?: BinaryType
-    heapSize?: HeapSize
+export function getPlatform(): string | undefined {
+    let { platform } = process
+    if (platform === 'win32') return 'windows'
+    if (platform === 'darwin') return 'darwin'
+    if (platform === 'linux') return 'linux'
+    return undefined
 }
 
-const DEFAULT_OPTIONS = {
-    request: 'binary',
-    release: 'releases',
-    version: 11,
-    implementation: 'hotspot',
-    binary: 'jre',
-    heapSize: 'normal'
-}
-
-export function buildUrl(options: Options) {
-    const actualOptions = Object.assign({}, DEFAULT_OPTIONS, options)
-    const requestUrl = [
-        ADOPT_OPEN_JDK_API_ROOT,
-        actualOptions.request,
-        actualOptions.release,
-        `openjdk${actualOptions.version}`
-    ].join('/')
-    const requestParams = [
-        `openjdk_impl=${actualOptions.implementation}`,
-        `os=${actualOptions.os}`,
-        `arch=${actualOptions.architecture}`,
-        `type=${actualOptions.binary}`,
-        `heap_size=${actualOptions.heapSize}`,
-        `release=latest`
-    ].join('&')
-    return `${requestUrl}?${requestParams}`
-}
-
-export interface DownloadResponse {
-    jreZipPath: string
-    destinationDir: string
-    options: Options
-}
-
-export function download(options: Options, destinationDir: string): Promise<DownloadResponse> {
-    return new Promise((resolve, reject) => {
+function registryUrl(home = os.homedir()): URL {
+    let res: URL | undefined
+    let filepath = path.join(home, '.npmrc')
+    if (fse.existsSync(filepath)) {
         try {
-            if (!fs.existsSync(destinationDir)) {
-                fs.mkdirSync(destinationDir)
+            let content = fse.readFileSync(filepath, 'utf8')
+            let uri: string | undefined
+            for (let line of content.split(/\r?\n/)) {
+                if (line.startsWith('#')) continue
+                let ms = line.match(/^(.*?)=(.*)$/)
+                if (ms && ms[1] === 'coc.nvim:registry') {
+                    uri = ms[2]
+                }
             }
-        } catch (err) {
-            reject(err)
+            if (uri) res = new URL(uri)
+        } catch (e) {
+            // ignore
         }
-
-        const fileToDownload = buildUrl(options)
-        const extension = options.os === 'windows' ? 'zip' : 'tgz'
-        const jreZipPath = path.join(destinationDir, `jre.${extension}`)
-
-        https
-            .get(fileToDownload, (res: any) => {
-                const fileToSave = fs.createWriteStream(jreZipPath)
-                res.pipe(fileToSave)
-                fileToSave.on('finish', () => {
-                    fileToSave.close()
-                    resolve({ destinationDir, jreZipPath, options })
-                })
-            })
-            .on('error', (err: any) => {
-                fs.unlinkSync(jreZipPath)
-                reject(err)
-            })
-    })
+    }
+    return res ?? new URL('https://registry.npmjs.org')
 }
 
-export function unzip(downloadResponse: DownloadResponse) {
-    const jreDir = path.join(downloadResponse.destinationDir, 'jre')
-    if (!fs.existsSync(jreDir)) {
-        fs.mkdirSync(jreDir)
+
+function getPackageName(): string | undefined {
+    let platform = getPlatform()
+    if (!platform) return undefined
+    if (platform === 'windows') return 'javajre-windows-64'
+    let isArm = process.arch.indexOf('arm') === 0
+    return `javajre-${platform}-${isArm ? 'arm' : ''}64`
+}
+
+export function checkJavac(javaHome: string): boolean {
+    let file = path.join(javaHome, 'bin', JAVAC_FILENAME)
+    if (fse.existsSync(file)) return true
+    return false
+}
+
+export async function checkAndDownloadJRE(context: ExtensionContext): Promise<string | undefined> {
+    let packageName = getPackageName()
+    if (!packageName) return undefined
+    let javaHome = path.join(context.storagePath, `jdk-${JRE_VERSION}`, packageName, 'jre')
+    if (checkJavac(javaHome)) return javaHome
+    let folder = path.resolve(javaHome, '..')
+    if (fse.existsSync(folder)) {
+        await fse.remove(folder)
     }
-    return new Promise((resolve, reject) => {
-        const extract = inly(downloadResponse.jreZipPath, jreDir)
-        extract.on('error', (err: any) => {
-            reject(err)
-        })
-        extract.on('end', () => {
-            fs.unlinkSync(downloadResponse.jreZipPath)
-            // Archive for MacOS contains a file named '._xxx' which interferes with detection of extracted directory
-            const extractedDir = fs.readdirSync(jreDir, { withFileTypes: true }).filter(d => d.isDirectory())[0].name
-            // Binary for MacOS has actual Java home inside '<archiveRootDir>/Contents/Home'
-            const actualJavaHome =
-                downloadResponse.options.os === 'mac' ? path.join(extractedDir, 'Contents', 'Home') : extractedDir
-            resolve(path.join(jreDir, actualJavaHome))
-        })
+    // download and extract to data folder
+    let registry = registryUrl()
+    const tmpfolder = path.join(os.tmpdir(), `jdk-${JRE_VERSION}`)
+    await window.withProgress({ title: `Installing jre from ${registry}` }, (progress, token) => {
+        return download(new URL(`${packageName}/-/${packageName}-${JRE_VERSION}.tgz`, registry), {
+            dest: tmpfolder,
+            extract: 'untar',
+            onProgress: percent => {
+                progress.report({ message: `Downloaded ${percent}%` })
+            }
+        }, token)
     })
+    fse.moveSync(tmpfolder, folder, { overwrite: true })
+    if (checkJavac(javaHome)) {
+        const runtime = await getRuntime(javaHome, { withVersion: true })
+        if (runtime?.version?.major >= 17) {
+            return javaHome
+        }
+    }
+    return javaHome
 }

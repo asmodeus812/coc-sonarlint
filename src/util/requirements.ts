@@ -17,6 +17,7 @@ import * as coc from "coc.nvim"
 import { Commands } from "./commands"
 import { logToSonarLintOutput } from "./logging"
 import { PlatformInformation } from 'coc-sonarlint/src/util/platform'
+import { checkAndDownloadJRE } from '../java/jre'
 
 const REQUIRED_JAVA_VERSION = 17
 
@@ -59,14 +60,14 @@ export async function resolveRequirements(
             const javaDir = dirs[0]
             javaHome = path.join(jreDir, javaDir)
         } else {
-            javaHome = await checkJavaRuntime()
+            javaHome = await checkJavaRuntime(context)
         }
     }
     const javaVersion = await checkJavaVersion(javaHome)
     return { javaHome, javaVersion }
 }
 
-function checkJavaRuntime(): Promise<string> {
+function checkJavaRuntime(context: coc.ExtensionContext): Promise<string> {
     return new Promise((resolve, reject) => {
         let { source, javaHome } = tryExplicitConfiguration()
         if (javaHome) {
@@ -92,7 +93,7 @@ function checkJavaRuntime(): Promise<string> {
 
         findJavaHome((err, home) => {
             if (err || !home) {
-                installManagedJre(resolve, reject)
+                installManagedJre(context, resolve, reject)
             } else {
                 resolve(home)
             }
@@ -189,34 +190,13 @@ function invalidJavaHome(reject: any, cause: string) {
     }
 }
 
-function installManagedJre(resolve: any, reject: any) {
-    return coc.window.withProgress(
-        { cancellable: true, title: 'SonarLint jre install' },
-        (progress, cancelToken) => {
-            return PlatformInformation.GetPlatformInformation()
-                .then(platformInfo => {
-                    const options = {
-                        os: platformInfo.os as jre.Os,
-                        architecture: platformInfo.arch as jre.Architecture,
-                        version: REQUIRED_JAVA_VERSION as jre.Version
-                    }
-                    progress.report({ message: 'Downloading' })
-                    return jre.download(options, path.join(__dirname, '..', 'jre'))
-                })
-                .then(downloadResponse => {
-                    progress.report({ message: 'Uncompressing' })
-                    return jre.unzip(downloadResponse)
-                })
-                .then(jreInstallDir => {
-                    progress.report({ message: 'Done' })
-                    coc.workspace
-                        .getConfiguration('sonarlint.ls')
-                        .update('javaHome', jreInstallDir, coc.ConfigurationTarget.Global)
-                    resolve(jreInstallDir)
-                })
-                .catch(err => {
-                    reject(err)
-                })
-        }
-    )
+export function installManagedJre(context: coc.ExtensionContext, resolve: any, reject: any) {
+    return checkAndDownloadJRE(context)
+        .then(jreInstallDir => {
+            coc.workspace
+                .getConfiguration('sonarlint.ls')
+                .update('javaHome', jreInstallDir, coc.ConfigurationTarget.Global)
+            resolve(jreInstallDir)
+        })
+        .catch(err => reject(err))
 }

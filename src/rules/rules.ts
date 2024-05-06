@@ -146,11 +146,24 @@ export class AllRulesTreeDataProvider
         return result
     }
 
-    private async getAllRules() {
+    public async getAllRules() {
         if (this.allRules === undefined) {
             this.allRules = await this.allRulesProvider()
         }
         return this.allRules
+    }
+
+    public filter(level?: ConfigLevel) {
+        if (this.levelFilter !== level) {
+            this.levelFilter = level
+            this.refresh()
+        }
+    }
+
+    public register(element: LanguageNode) {
+        if (element instanceof LanguageNode) {
+            this.allRootsStates.set(element.id, element.collapsibleState)
+        }
     }
 
     public refresh() {
@@ -161,18 +174,6 @@ export class AllRulesTreeDataProvider
         this.allChildren = new Map()
         this._onDidChangeTreeData.fire(undefined)
     }
-
-    public filter(level?: ConfigLevel) {
-        this.levelFilter = level
-        this.refresh()
-    }
-
-    public register(element: LanguageNode) {
-        if (element instanceof LanguageNode) {
-            this.allRootsStates.set(element.id, element.collapsibleState)
-        }
-    }
-
 }
 
 function byName(r1: Rule, r2: Rule) {

@@ -70,7 +70,7 @@ export class PlatformInformation {
 
     private static async GetWindowsArchitecture(): Promise<string> {
         return util
-            .execChildProcess("wmic os get osarchitecture", util.extensionPath)
+            .execChildProcess("wmic os get osarchitecture", __dirname)
             .then((architecture) => {
                 if (architecture) {
                     const archArray: string[] = architecture.split(os.EOL)
@@ -94,7 +94,7 @@ export class PlatformInformation {
 
     private static async GetUnixArchitecture(): Promise<string | undefined> {
         return util
-            .execChildProcess("uname -m", util.packageJson.extensionFolderPath)
+            .execChildProcess("uname -m", __dirname)
             .then((architecture) => {
                 if (architecture) {
                     return architecture.trim()
