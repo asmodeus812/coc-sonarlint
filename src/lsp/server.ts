@@ -22,7 +22,7 @@ export function languageServerCommand(
     requirements: RequirementsData,
 ) {
     let location: string | undefined = getSonarLintConfiguration().get('ls.directory')
-    location = !location ? Path.resolve(__dirname, '../') : location
+    location = !location || !fs.existsSync(location) ? Path.resolve(__dirname, '../') : location
 
     if (location) {
         location = coc.workspace.expand(location)
@@ -30,7 +30,7 @@ export function languageServerCommand(
             logToSonarLintOutput(
                 `Sonar can not start, invalid or non existent path was detected ${location}`,
             )
-            coc.window.showWarningMessage(`Sonar binaries were not found, check SonarLint output`)
+            coc.window.showWarningMessage(`Sonar binaries not found, check SonarLint output`)
             return undefined
         }
     } else {
