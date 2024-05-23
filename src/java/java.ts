@@ -32,7 +32,7 @@ export function installClasspathListener(
 ) {
     const extension = getJavaExtension()
     if (!extension) {
-        coc.window.showWarningMessage(`Unable to find any compliant java extension installed in the coc runtime`)
+        logToSonarLintOutput(`Unable to find any compliant java extension installed in the coc runtime`)
         return
     }
     if (extension?.isActive) {
@@ -113,7 +113,7 @@ export async function getJavaConfig(
     const extension = getJavaExtension()
     try {
         if (!extension) {
-            coc.window.showWarningMessage(`Unable to find any compliant java extension installed in the coc runtime`)
+            logToSonarLintOutput(`Unable to find any compliant java extension installed in the coc runtime`)
             return
         }
         const extensionApi = await extension?.activate()

@@ -9,13 +9,14 @@
 import * as coc from "coc.nvim"
 import * as fs from "fs"
 import * as path from "path"
-import { SONARLINT_CATEGORY } from "../settings/settings"
-import { SonarLintDocumentation } from "../commons"
+import {SONARLINT_CATEGORY} from "../settings/settings"
+import {SonarLintDocumentation} from "../commons"
 
 const PATH_TO_COMPILE_COMMANDS = "pathToCompileCommands"
 const FULL_PATH_TO_COMPILE_COMMANDS = `${SONARLINT_CATEGORY}.${PATH_TO_COMPILE_COMMANDS}`
 const DO_NOT_ASK_ABOUT_COMPILE_COMMANDS_FLAG = "doNotAskAboutCompileCommands"
 let remindMeLaterAboutCompileCommandsFlag = false
+let userSelectingCompileCommandsChoice = false
 
 function showMessageAndUpdateConfig(compilationDbPath: string) {
     coc.window.showInformationMessage(
@@ -44,9 +45,7 @@ function showMessageAndUpdateConfig(compilationDbPath: string) {
         )
 }
 
-function tryRelativizeToWorkspaceFolder(
-    filePath: string,
-): [string, coc.WorkspaceFolder | undefined] {
+function tryRelativizeToWorkspaceFolder(filePath: string): [string, coc.WorkspaceFolder | undefined] {
     if (!path.isAbsolute(filePath)) {
         return [filePath, undefined]
     }
@@ -60,15 +59,18 @@ function tryRelativizeToWorkspaceFolder(
     return [filePath, undefined]
 }
 
-export async function configureCompilationDatabase() {
-    const paths = (
-        await coc.workspace.findFiles(`**/compile_commands.json`)
-    ).filter((path) => fs.existsSync(path.fsPath))
+export async function configureDoNotAskCompilationDatabase(context: coc.ExtensionContext) {
+    return context.workspaceState.update(
+        DO_NOT_ASK_ABOUT_COMPILE_COMMANDS_FLAG,
+        true,
+    )
+}
+
+export async function configureCompilationDatabase(context: coc.ExtensionContext) {
+    const paths = (await coc.workspace.findFiles(`**/compile_commands.json`)).filter((path) => fs.existsSync(path.fsPath))
     if (paths.length === 0) {
-        coc.window.showWarningMessage(`No compilation databases were found in the workspace\n 
-                [How to generate compile commands](${SonarLintDocumentation.C_CPP_ANALYSIS})`
-        )
-        coc.workspace
+        coc.window.showWarningMessage(`No compilation databases were found in the workspace\n [How to generate compile commands](${SonarLintDocumentation.C_CPP_ANALYSIS})`)
+        await coc.workspace
             .getConfiguration()
             .update(
                 FULL_PATH_TO_COMPILE_COMMANDS,
@@ -82,32 +84,33 @@ export async function configureCompilationDatabase() {
 
 export function notifyMissingCompileCommands(context: coc.ExtensionContext) {
     return async () => {
-        if (
-            (await doNotAskAboutCompileCommandsFlag(context)) ||
-            remindMeLaterAboutCompileCommandsFlag
-        ) {
+        if (userSelectingCompileCommandsChoice || (await doNotAskAboutCompileCommandsFlag(context)) || remindMeLaterAboutCompileCommandsFlag) {
             return
         }
-        const remindMeLaterAction = "Ask me later"
-        const configureCompileCommandsAction = "Configure compile commands"
-        const message = `SonarLint is unable to analyze C and C++ file(s) because there is no configured compilation 
-      database.`
-        coc.window
+        userSelectingCompileCommandsChoice = true
+        const configureCompileCommandsAction = "Configure compile commands now"
+        const remindMeLaterAction = "Ask me later to configure compile commands"
+        const doNotAskAboutCompileCommandsAction = "Do not ask for compile commands again for this workspace"
+        const message = `SonarLint might be unable to analyze C and C++ file(s) because there is no configured compilation database.`
+        const selection = await coc.window
             .showWarningMessage(
                 message,
                 configureCompileCommandsAction,
                 remindMeLaterAction,
+                doNotAskAboutCompileCommandsAction
             )
-            .then((selection) => {
-                switch (selection) {
-                    case configureCompileCommandsAction:
-                        configureCompilationDatabase()
-                        break
-                    case remindMeLaterAction:
-                        remindMeLaterAboutCompileCommandsFlag = true
-                        break
-                }
-            })
+        switch (selection) {
+            case configureCompileCommandsAction:
+                configureCompilationDatabase(context)
+                break
+            case remindMeLaterAction:
+                remindMeLaterAboutCompileCommandsFlag = true
+                break
+            case doNotAskAboutCompileCommandsAction:
+                configureDoNotAskCompilationDatabase(context)
+                break
+        }
+        userSelectingCompileCommandsChoice = false
     }
 }
 
@@ -131,7 +134,7 @@ async function showCompilationDatabaseOptions(paths: coc.Uri[]) {
     }))
     items.sort((i1, i2) => i1.label.localeCompare(i2.label))
     const selection = await coc.window.showQuickPick(items, {
-        placeholder: "Pick a compilation database",
+        placeholder: "Pick a compilation database source",
     })
     if (selection) {
         return showMessageAndUpdateConfig(paths[selection.index].fsPath)

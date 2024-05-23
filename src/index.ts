@@ -39,6 +39,7 @@ import { showRuleDescription } from "./rules/rulepanel"
 import {
     configureCompilationDatabase,
     notifyMissingCompileCommands,
+
 } from "./cfamily/cfamily"
 
 const DOCUMENT_SELECTOR = [
