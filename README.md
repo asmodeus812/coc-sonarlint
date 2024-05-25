@@ -62,6 +62,14 @@ This extension also provides a custom root directory where the sonar lint binari
 }
 ```
 
+Sonarlint will try to prompt you when a compile commands in c or cpp projects is not found, to disable that feature globally, and ignore the missing compile commands you can set the following property in your coc-settings.json
+
+```json
+{
+    "sonarlint.notifyMissingCompileCommands": false
+}
+```
+
 The directory must contain two folders, a server/ and analyzers/, where the server binary is located in the server/ folder and all analyzer binaries are located in the analyzers/ folder
 
 ### JS/TS analysis specific requirements

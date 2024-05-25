@@ -1,8 +1,8 @@
 {
     "name": "coc-sonarlint",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "description": "sonarlint for coc.nvim",
-    "author": "asmodeus812 <svetlozar321@gmail.com>",
+    "author": "asmodeus812",
     "license": "MIT",
     "main": "lib/index.js",
     "keywords": [
@@ -308,6 +308,13 @@
                     "type": "string",
                     "default": "",
                     "markdownDescription": "Files whose name match this [glob pattern](https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob) will not be processed by analyzers. In [Connected Mode](command:SonarLint.HelpAndFeedbackLinkClicked?%22connectedModeDocs%22) with SonarQube or SonarCloud, this property will be ignored and server exclusion settings will be applied. No rules are evaluated on excluded files. Example: `**/lib/**,**/*generated*`",
+                    "scope": "resource"
+                },
+                "sonarlint.notifyMissingCompileCommands": {
+                    "order": 21,
+                    "default": true,
+                    "type": "boolean",
+                    "markdownDescription": "Specifies if missing or invalid compile commands in c or cpp projects will prompt the user to generate or create one, by default the user will be asked for each new workspace he visits, and the user can opt out of it per workspace by selecting the option - Do not ask for compile commands again for this workspace",
                     "scope": "resource"
                 },
                 "sonarlint.ls.javaHome": {
