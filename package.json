@@ -1,6 +1,6 @@
 {
     "name": "coc-sonarlint",
-    "version": "0.0.10",
+    "version": "0.0.11",
     "description": "sonarlint for coc.nvim",
     "author": "asmodeus812",
     "license": "MIT",
