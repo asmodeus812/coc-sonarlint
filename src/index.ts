@@ -7,13 +7,13 @@
 import * as util from "./util/util"
 import * as protocol from "./lsp/protocol"
 import * as ChildProcess from "child_process"
-import type { Position, Location } from "vscode-languageserver-types"
-import { ExtensionContext, StreamInfo, window } from "coc.nvim"
+import type {Position, Location} from "vscode-languageserver-types"
+import {ExtensionContext, StreamInfo, window} from "coc.nvim"
 import * as coc from "coc.nvim"
 import {
-    enableVerboseLogs,
+    updateVerboseLogging,
     isVerboseEnabled,
-    loadInitialSettings,
+    isNotificationEnabled
 } from "./settings/settings"
 import {
     getLogOutput,
@@ -21,12 +21,12 @@ import {
     logToSonarLintOutput,
     showLogOutput,
 } from "./util/logging"
-import { setExtensionContext } from "./util/util"
-import { languageServerCommand } from "./lsp/server"
-import { JAVA_HOME_CONFIG, installManagedJre, resolveRequirements } from "./util/requirements"
-import { SonarLintExtendedLanguageClient } from "./lsp/client"
-import { getPlatform } from "./util/platform"
-import { Commands } from "./util/commands"
+import {setExtensionContext} from "./util/util"
+import {languageServerCommand} from "./lsp/server"
+import {JAVA_HOME_CONFIG, installManagedJre, resolveRequirements} from "./util/requirements"
+import {SonarLintExtendedLanguageClient} from "./lsp/client"
+import {getPlatform} from "./util/platform"
+import {Commands} from "./util/commands"
 import {
     AllRulesTreeDataProvider,
     LanguageNode,
@@ -34,8 +34,8 @@ import {
     languageKeyDeNormalization,
     toggleRule,
 } from "./rules/rules"
-import { getJavaConfig, installClasspathListener } from "./java/java"
-import { showRuleDescription } from "./rules/rulepanel"
+import {getJavaConfig, installClasspathListener} from "./java/java"
+import {showRuleDescription} from "./rules/rulepanel"
 import {
     configureCompilationDatabase,
     notifyMissingCompileCommands,
@@ -43,7 +43,7 @@ import {
 } from "./cfamily/cfamily"
 
 const DOCUMENT_SELECTOR = [
-    { scheme: "file", pattern: "**/*" },
+    {scheme: "file", pattern: "**/*"},
     {
         notebook: {
             scheme: "file",
@@ -76,7 +76,7 @@ async function runJavaServer(
         })
         .then((requirements) => {
             return new Promise<StreamInfo>((resolve, reject) => {
-                const { command, args }: any = languageServerCommand(context, requirements)
+                const {command, args}: any = languageServerCommand(context, requirements)
                 if (!command) {
                     reject(new Error("Failed to resolve launch command and args"))
                     return
@@ -84,7 +84,7 @@ async function runJavaServer(
                 logToSonarLintOutput(`Executing ${command} ${args.join(" ")}`)
                 const process = ChildProcess.spawn(command, args)
 
-                process.stderr.on("data", function(data) {
+                process.stderr.on("data", function (data) {
                     logWithPrefix(data, "[stderr]")
                 })
 
@@ -97,8 +97,6 @@ async function runJavaServer(
 }
 
 export async function activate(context: ExtensionContext): Promise<void> {
-
-    loadInitialSettings()
     setExtensionContext(context)
     initLogOutput(context)
 
@@ -237,7 +235,7 @@ function registerCommands(context: coc.ExtensionContext) {
                 const indexOfSeparator = ruleKey.indexOf(":")
                 const language = indexOfSeparator > 0 ? ruleKey.substring(0, indexOfSeparator) : null
                 const type = indexOfSeparator > 0 && language
-                    ? new RuleNode({ key: languageKeyDeNormalization(language) + ":" + ruleKey.substring(indexOfSeparator + 1).toLowerCase() } as protocol.Rule, language)
+                    ? new RuleNode({key: languageKeyDeNormalization(language) + ":" + ruleKey.substring(indexOfSeparator + 1).toLowerCase()} as protocol.Rule, language)
                     : new LanguageNode(ruleKey, coc.TreeItemCollapsibleState.Collapsed)
                 let node = await allRulesTreeDataProvider.getTreeItem(type)
                 if (type instanceof RuleNode && language) {
@@ -247,11 +245,11 @@ function registerCommands(context: coc.ExtensionContext) {
                         await allRulesTreeDataProvider.getChildren(pnode)
                         node = await allRulesTreeDataProvider.getTreeItem(type)
                     }
-                    await allRulesView?.reveal(node, { select: true, focus: true, expand: true })
+                    await allRulesView?.reveal(node, {select: true, focus: true, expand: true})
                 } else if (type instanceof LanguageNode) {
                     node.collapsibleState = coc.TreeItemCollapsibleState.Expanded
                     allRulesTreeDataProvider.register(node)
-                    await allRulesView?.reveal(node, { select: true, focus: true, expand: true })
+                    await allRulesView?.reveal(node, {select: true, focus: true, expand: true})
                 } else {
                     coc.window.showWarningMessage(`Unable to find or resolve rule id ${ruleKey}`)
                 }
@@ -286,22 +284,20 @@ function registerCommands(context: coc.ExtensionContext) {
     context.subscriptions.push(
         coc.commands.registerCommand(
             Commands.CONFIGURE_COMPILATION_DATABASE,
-            configureCompilationDatabase,
+            () => void configureCompilationDatabase(),
         ),
     )
 
     context.subscriptions.push(
-        coc.commands.registerCommand(Commands.ENABLE_VERBOSE_LOGS, () =>
-            enableVerboseLogs(),
-        ),
+        coc.commands.registerCommand(Commands.ENABLE_VERBOSE_LOGS, () => updateVerboseLogging(true))
     )
 
     context.subscriptions.push(
         coc.commands.registerCommand(Commands.INSTALL_MANAGED_JRE, () => {
-            installManagedJre(context, function() {
+            installManagedJre(context, function () {
                 coc.window
                     .showInformationMessage(`Downloaded & installed a managed jre`)
-            }, function() {
+            }, function () {
                 coc.window
                     .showErrorMessage(`Unable to download managed jre`)
             })
@@ -328,7 +324,7 @@ function installCustomRequestHandlers(context: coc.ExtensionContext) {
         util.shouldAnalyseFile(params.uri),
     )
     languageClient.onRequest(
-        protocol.CanShowMissingRequirementNotification.type, () => { return true })
+        protocol.CanShowMissingRequirementNotification.type, () => {return true})
     languageClient.onNotification(
         protocol.ShowSonarLintOutputNotification.type,
         () => void coc.commands.executeCommand(Commands.SHOW_SONARLINT_OUTPUT),
@@ -351,10 +347,13 @@ function installCustomRequestHandlers(context: coc.ExtensionContext) {
             coc.Uri.parse(browseTo),
         ),
     )
-    languageClient.onNotification(
-        protocol.NeedCompilationDatabaseRequest.type,
-        notifyMissingCompileCommands(context),
-    )
+
+    if (isNotificationEnabled() !== false) {
+        languageClient.onNotification(
+            protocol.NeedCompilationDatabaseRequest.type,
+            notifyMissingCompileCommands(),
+        )
+    }
 }
 
 async function showAllLocations(issue: protocol.Issue) {
@@ -372,7 +371,7 @@ async function showAllLocations(issue: protocol.Issue) {
                     character: textRange.endLineOffset,
                 } as Position,
             }
-            locations.push({ uri: loc.uri, range: range } as Location)
+            locations.push({uri: loc.uri, range: range} as Location)
         }),
     )
 

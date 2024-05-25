@@ -9,12 +9,9 @@
 import * as coc from "coc.nvim"
 import * as fs from "fs"
 import * as path from "path"
-import {SONARLINT_CATEGORY} from "../settings/settings"
+import {isNotificationEnabled, updateCompileCommandsPath, updateNotificationDisabled} from "../settings/settings"
 import {SonarLintDocumentation} from "../commons"
 
-const PATH_TO_COMPILE_COMMANDS = "pathToCompileCommands"
-const FULL_PATH_TO_COMPILE_COMMANDS = `${SONARLINT_CATEGORY}.${PATH_TO_COMPILE_COMMANDS}`
-const DO_NOT_ASK_ABOUT_COMPILE_COMMANDS_FLAG = "doNotAskAboutCompileCommands"
 let remindMeLaterAboutCompileCommandsFlag = false
 let userSelectingCompileCommandsChoice = false
 
@@ -22,27 +19,8 @@ function showMessageAndUpdateConfig(compilationDbPath: string) {
     coc.window.showInformationMessage(
         `Analysis configured. Compilation database path is set to: ${compilationDbPath}`,
     )
-    const [pathForSettings, workspaceFolder] =
-        tryRelativizeToWorkspaceFolder(compilationDbPath)
-
-    if (workspaceFolder !== undefined) {
-        const config = coc.workspace.getConfiguration(
-            SONARLINT_CATEGORY,
-            workspaceFolder.uri,
-        )
-        return config.update(
-            PATH_TO_COMPILE_COMMANDS,
-            pathForSettings,
-            coc.ConfigurationTarget.WorkspaceFolder,
-        )
-    }
-    return coc.workspace
-        .getConfiguration()
-        .update(
-            FULL_PATH_TO_COMPILE_COMMANDS,
-            pathForSettings,
-            coc.ConfigurationTarget.Workspace,
-        )
+    const [pathForSettings, _] = tryRelativizeToWorkspaceFolder(compilationDbPath)
+    updateCompileCommandsPath(pathForSettings)
 }
 
 function tryRelativizeToWorkspaceFolder(filePath: string): [string, coc.WorkspaceFolder | undefined] {
@@ -59,68 +37,51 @@ function tryRelativizeToWorkspaceFolder(filePath: string): [string, coc.Workspac
     return [filePath, undefined]
 }
 
-export async function configureDoNotAskCompilationDatabase(context: coc.ExtensionContext) {
-    return context.workspaceState.update(
-        DO_NOT_ASK_ABOUT_COMPILE_COMMANDS_FLAG,
-        true,
-    )
-}
-
-export async function configureCompilationDatabase(context: coc.ExtensionContext) {
+export async function configureCompilationDatabase() {
     const paths = (await coc.workspace.findFiles(`**/compile_commands.json`)).filter((path) => fs.existsSync(path.fsPath))
     if (paths.length === 0) {
         coc.window.showWarningMessage(`No compilation databases were found in the workspace\n [How to generate compile commands](${SonarLintDocumentation.C_CPP_ANALYSIS})`)
-        await coc.workspace
-            .getConfiguration()
-            .update(
-                FULL_PATH_TO_COMPILE_COMMANDS,
-                undefined,
-                coc.ConfigurationTarget.Workspace,
-            )
+        updateCompileCommandsPath(undefined)
     } else {
         await showCompilationDatabaseOptions(paths)
     }
 }
 
-export function notifyMissingCompileCommands(context: coc.ExtensionContext) {
+export function notifyMissingCompileCommands() {
     return async () => {
-        if (userSelectingCompileCommandsChoice || (await doNotAskAboutCompileCommandsFlag(context)) || remindMeLaterAboutCompileCommandsFlag) {
+        if (userSelectingCompileCommandsChoice || (isNotificationEnabled() !== true) || remindMeLaterAboutCompileCommandsFlag) {
             return
         }
         userSelectingCompileCommandsChoice = true
+        const remindMeLaterAction = "Ask me later again"
+        const doNotAskGlobally = "Never ask or prompt me again"
+        const doNotAskForThisWorkspace = "Do not ask for this workspace"
         const configureCompileCommandsAction = "Configure compile commands now"
-        const remindMeLaterAction = "Ask me later to configure compile commands"
-        const doNotAskAboutCompileCommandsAction = "Do not ask for compile commands again for this workspace"
         const message = `SonarLint might be unable to analyze C and C++ file(s) because there is no configured compilation database.`
         const selection = await coc.window
             .showWarningMessage(
                 message,
                 configureCompileCommandsAction,
                 remindMeLaterAction,
-                doNotAskAboutCompileCommandsAction
+                doNotAskForThisWorkspace,
+                doNotAskGlobally
             )
         switch (selection) {
             case configureCompileCommandsAction:
-                configureCompilationDatabase(context)
+                configureCompilationDatabase()
                 break
             case remindMeLaterAction:
                 remindMeLaterAboutCompileCommandsFlag = true
                 break
-            case doNotAskAboutCompileCommandsAction:
-                configureDoNotAskCompilationDatabase(context)
+            case doNotAskForThisWorkspace:
+                updateNotificationDisabled(false, undefined);
+                break
+            case doNotAskGlobally:
+                updateNotificationDisabled(false, coc.ConfigurationTarget.Global);
                 break
         }
         userSelectingCompileCommandsChoice = false
     }
-}
-
-async function doNotAskAboutCompileCommandsFlag(
-    context: coc.ExtensionContext,
-): Promise<boolean> {
-    return context.workspaceState.get(
-        DO_NOT_ASK_ABOUT_COMPILE_COMMANDS_FLAG,
-        false,
-    )
 }
 
 async function showCompilationDatabaseOptions(paths: coc.Uri[]) {

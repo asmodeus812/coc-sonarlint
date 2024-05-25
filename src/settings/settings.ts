@@ -18,30 +18,31 @@ let currentConfig: WorkspaceConfiguration
 
 export const SONARLINT_CATEGORY = "sonarlint"
 export const VERBOSE_LOGS = "output.showVerboseLogs"
+export const PATH_TO_COMPILE_COMMANDS = "pathToCompileCommands"
+export const NOTIFY_COMPILE_COMMANDS = "notifyMissingCompileCommands"
 
 export function getSonarLintConfiguration(): WorkspaceConfiguration {
     return workspace.getConfiguration(SONARLINT_CATEGORY)
 }
 
 export function isVerboseEnabled(): boolean {
-    return getCurrentConfiguration()?.get(VERBOSE_LOGS, false)
+    return getSonarLintConfiguration().get(VERBOSE_LOGS, false)
 }
 
-export function enableVerboseLogs() {
-    getCurrentConfiguration()?.update(
-        VERBOSE_LOGS,
-        true,
-        ConfigurationTarget.Global,
-    )
-    window.showInformationMessage("Verbose logging enabled.")
+export function isNotificationEnabled(): boolean {
+    return getSonarLintConfiguration().get(NOTIFY_COMPILE_COMMANDS, true)
 }
 
-export function loadInitialSettings() {
-    currentConfig = getSonarLintConfiguration()
+export function updateNotificationDisabled(value: boolean, target?: ConfigurationTarget | undefined) {
+    getSonarLintConfiguration().update(NOTIFY_COMPILE_COMMANDS, value, target)
 }
 
-export function getCurrentConfiguration() {
-    return currentConfig
+export function updateCompileCommandsPath(value: string | undefined, target?: ConfigurationTarget | undefined) {
+    getSonarLintConfiguration().update(PATH_TO_COMPILE_COMMANDS, value, target)
+}
+
+export function updateVerboseLogging(value: boolean, target?: ConfigurationTarget | undefined) {
+    getSonarLintConfiguration().update(VERBOSE_LOGS, value, target)
 }
 
 export function onConfigurationChange() {
