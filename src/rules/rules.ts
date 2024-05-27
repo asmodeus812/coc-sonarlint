@@ -192,7 +192,7 @@ export function toggleRule(level?: string) {
                 level = !current || current == "on" ? "off" : "on"
             }
             let localLevel = !level ? rules[ruleKey] : level
-            rules = Object.assign({ [ruleKey]: { localLevel } }, rules)
+            rules = {[ruleKey]: { localLevel }, ...rules}
             if (localLevel === "off") {
                 const result = await coc.window.showPrompt(
                     `Are you sure you want to disable rule ${ruleKey}? `,
@@ -204,11 +204,7 @@ export function toggleRule(level?: string) {
             coc.window.showWarningMessage(
                 `Changed level of rule ${ruleKey} to ${localLevel}`,
             )
-            return await configuration.update(
-                "rules",
-                rules,
-                coc.ConfigurationTarget.Global,
-            )
+            return await configuration.update("rules", rules)
         } else {
             const { key, activeByDefault } = ruleKey
             let localLevel = level
@@ -235,11 +231,7 @@ export function toggleRule(level?: string) {
                 delete rules[key]
             }
             coc.window.showWarningMessage(`Changed level of rule ${key} to ${localLevel}`)
-            return await configuration.update(
-                "rules",
-                rules,
-                coc.ConfigurationTarget.Global,
-            )
+            return await configuration.update("rules", rules)
         }
     }
 }
