@@ -318,6 +318,10 @@ function installCustomRequestHandlers() {
     )
     languageClient.onRequest(protocol.ListFilesInFolderRequest.type, (params: protocol.FolderUriParams) => {
         const files: any[] = []
+        const ignored: string[] = coc.workspace
+            .getConfiguration()
+            .get<string[]>("sonarlint.listFilesFoldersExclusions", [])
+
         const folderCrawler = (dir: string) => {
             let elements: string[] = []
             try {
@@ -334,7 +338,7 @@ function installCustomRequestHandlers() {
                             filePath: full,
                             fileName: elem
                         })
-                    } else if (!elem.startsWith(".")) {
+                    } else if (!ignored.includes(elem)) {
                         folderCrawler(full)
                     }
                 } catch (error) {

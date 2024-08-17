@@ -1,6 +1,6 @@
 {
     "name": "coc-sonarlint",
-    "version": "0.0.14",
+    "version": "0.0.15",
     "description": "Coc sonar lint language server extension client",
     "license": "MIT",
     "main": "lib/index.js",
@@ -299,15 +299,40 @@
                     "markdownDescription": "Files whose name match this [glob pattern](https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob) are considered as test files by analyzers. Most rules are *not* evaluated on test files.\n\nIn [Connected Mode](command:SonarLint.HelpAndFeedbackLinkClicked?%22connectedModeDocs%22), this setting is configured **on the server-side** and shared among all contributors.\n\nExample: `**/test/**,**/*test*,**/*Test*`",
                     "scope": "resource"
                 },
-                "sonarlint.analysisExcludesStandalone": {
+
+                "sonarlint.listFilesFoldersExclusions": {
                     "order": 13,
+                    "type": "array",
+                    "default": [ 
+                        "node_modules",
+                        "target",
+                        ".settings",
+                        ".angular",
+                        ".next",
+                        ".nuxt",
+                        ".cargo",
+                        ".cache",
+                        ".github",
+                        ".tmp",
+                        ".log",
+                        ".vim",
+                        ".git",
+                        ".svn",
+                        ".hg",
+                        ".idea",
+                        ".vscode"
+                    ],
+                    "markdownDescription": "List of folder names which are to be excluded when the files for analysis are collected and sent to sonar language server"
+                },
+                "sonarlint.analysisExcludesStandalone": {
+                    "order": 14,
                     "type": "string",
-                    "default": "(node_modules|.git|.svn|.hg|.idea|.vscode)/**",
+                    "default": "**/target/**,**/build/**,**/node_modules/**,**/.angular/**,**/.next/**,**/.nuxt/**,**/.cargo/**,**/.cache/**,**/.tmp/**,**/.log/**,**/.git/**,**/.svn/**,**/.hg/**,**/.idea/**,**/.vscode/**",
                     "markdownDescription": "Files whose name match this [glob pattern](https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob) will not be processed by analyzers. In [Connected Mode](command:SonarLint.HelpAndFeedbackLinkClicked?%22connectedModeDocs%22) with SonarQube or SonarCloud, this property will be ignored and server exclusion settings will be applied. No rules are evaluated on excluded files. Example: `**/lib/**,**/*generated*`",
                     "scope": "resource"
                 },
                 "sonarlint.notifyMissingCompileCommands": {
-                    "order": 21,
+                    "order": 15,
                     "default": true,
                     "type": "boolean",
                     "markdownDescription": "Specifies if missing or invalid compile commands in c or cpp projects will prompt the user to generate or create one, by default the user will be asked for each new workspace he visits, and the user can opt out of it per workspace by selecting the option - Do not ask for compile commands again for this workspace",
@@ -322,11 +347,11 @@
                 "sonarlint.ls.directory": {
                     "order": 21,
                     "type": "string",
-                    "markdownDescription": "Specifies the directory for where to sonar lint and its binaries, the directory must contain two folders, a server/ and analyzers/, where the server binary is located in the server/ folder and all analyzer binaries are located in the analyzers/ folder",
+                    "markdownDescription": "Specifies the directory where the sonar lint binaries are located, the directory must contain two sub-folders, a server/ and analyzers/, where the server binary is located in the server/ folder and all analyzer binaries are located in the analyzers/ folder",
                     "scope": "machine"
                 },
                 "sonarlint.ls.vmargs": {
-                    "order": 21,
+                    "order": 22,
                     "type": "string",
                     "markdownDescription": "Extra JVM arguments used to launch the SonarLint Language Server. e.g. `-Xmx1024m`",
                     "scope": "machine"
@@ -401,7 +426,7 @@
                 "sonarlint.disableTelemetry": {
                     "order": 99,
                     "type": "boolean",
-                    "default": false,
+                    "default": true,
                     "markdownDescription": "Disable sending anonymous usage statistics to SonarSource. Click [here](https://github.com/SonarSource/sonarlint-vscode/blob/master/telemetry-sample.md) to see a sample of the data that are collected.",
                     "scope": "window"
                 },
