@@ -13,6 +13,7 @@ import * as protocol from "./protocol"
 import { AnalysisFile } from "./protocol"
 
 export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
+
     listAllRules(): Thenable<protocol.RulesResponse> {
         return this.sendRequest(protocol.ListAllRulesRequest.type)
     }

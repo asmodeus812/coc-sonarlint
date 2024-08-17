@@ -4,11 +4,13 @@
  * sonarlint@sonarsource.com
  * Licensed under the LGPLv3 License. See LICENSE.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */import Path from "path"
+import * as FS from 'fs'
+import * as path from 'path'
 import * as util from "./util/util"
 import * as protocol from "./lsp/protocol"
 import * as ChildProcess from "child_process"
-import type { Position, Location } from "vscode-languageserver-types"
-import { ExtensionContext, StreamInfo, nvim, window } from "coc.nvim"
+import type {Position, Location} from "vscode-languageserver-types"
+import {ExtensionContext, StreamInfo, nvim, window} from "coc.nvim"
 import * as coc from "coc.nvim"
 import {
     updateVerboseLogging,
@@ -21,12 +23,12 @@ import {
     logToSonarLintOutput,
     showLogOutput,
 } from "./util/logging"
-import { setExtensionContext } from "./util/util"
-import { languageServerCommand } from "./lsp/server"
-import { JAVA_HOME_CONFIG, installManagedJre, resolveRequirements } from "./util/requirements"
-import { SonarLintExtendedLanguageClient } from "./lsp/client"
-import { getPlatform } from "./util/platform"
-import { Commands } from "./util/commands"
+import {setExtensionContext} from "./util/util"
+import {languageServerCommand} from "./lsp/server"
+import {JAVA_HOME_CONFIG, installManagedJre, resolveRequirements} from "./util/requirements"
+import {SonarLintExtendedLanguageClient} from "./lsp/client"
+import {getPlatform} from "./util/platform"
+import {Commands} from "./util/commands"
 import {
     AllRulesTreeDataProvider,
     LanguageNode,
@@ -34,16 +36,18 @@ import {
     languageKeyDeNormalization,
     toggleRule,
 } from "./rules/rules"
-import { getJavaConfig, installClasspathListener } from "./java/java"
-import { showRuleDescription } from "./rules/rulepanel"
+import {getJavaConfig, installClasspathListener} from "./java/java"
+import {showRuleDescription} from "./rules/rulepanel"
 import {
     configureCompilationDatabase,
     notifyMissingCompileCommands,
-
 } from "./cfamily/cfamily"
 
 const DOCUMENT_SELECTOR = [
-    { scheme: "file", pattern: "**/*" },
+    {
+        scheme: "file",
+        pattern: "**/*",
+    },
     {
         notebook: {
             scheme: "file",
@@ -76,7 +80,7 @@ async function runJavaServer(
         })
         .then((requirements) => {
             return new Promise<StreamInfo>((resolve, reject) => {
-                const { command, args }: any = languageServerCommand(context, requirements)
+                const {command, args}: any = languageServerCommand(context, requirements)
                 if (!command) {
                     reject(new Error("Failed to resolve launch command and args"))
                     return
@@ -84,7 +88,7 @@ async function runJavaServer(
                 logToSonarLintOutput(`Executing ${command} ${args.join(" ")}`)
                 const process = ChildProcess.spawn(command, args)
 
-                process.stderr.on("data", function(data) {
+                process.stderr.on("data", function (data) {
                     logWithPrefix(data, "[stderr]")
                 })
 
@@ -119,7 +123,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         initializationOptions: () => {
             return {
                 productKey: "vscode",
-                productName: "SonarLint coc",
+                productName: "SonarLint",
                 productVersion: "1.0.0",
                 showVerboseLogs: coc.workspace
                     .getConfiguration()
@@ -143,6 +147,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     )
 
     await languageClient.start()
+    coc.services.registerLanguageClient(languageClient)
 
     allRulesTreeDataProvider = new AllRulesTreeDataProvider(
         () => languageClient.listAllRules(),
@@ -166,8 +171,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         modes: ["n"],
     })
     context.subscriptions.push(floatDescriptionFactory)
-
-    installCustomRequestHandlers(context)
+    installCustomRequestHandlers()
 
     coc.workspace.onDidChangeConfiguration(async (event) => {
         if (event.affectsConfiguration("sonarlint.rules")) {
@@ -236,7 +240,7 @@ function registerCommands(context: coc.ExtensionContext) {
                 const indexOfSeparator = ruleKey.indexOf(":")
                 const language = indexOfSeparator > 0 ? ruleKey.substring(0, indexOfSeparator) : null
                 const type = indexOfSeparator > 0 && language
-                    ? new RuleNode({ key: languageKeyDeNormalization(language) + ":" + ruleKey.substring(indexOfSeparator + 1).toLowerCase() } as protocol.Rule, language)
+                    ? new RuleNode({key: languageKeyDeNormalization(language) + ":" + ruleKey.substring(indexOfSeparator + 1).toLowerCase()} as protocol.Rule, language)
                     : new LanguageNode(ruleKey, coc.TreeItemCollapsibleState.Collapsed)
                 let node = await allRulesTreeDataProvider.getTreeItem(type)
                 if (type instanceof RuleNode && language) {
@@ -246,11 +250,11 @@ function registerCommands(context: coc.ExtensionContext) {
                         await allRulesTreeDataProvider.getChildren(pnode)
                         node = await allRulesTreeDataProvider.getTreeItem(type)
                     }
-                    await allRulesView?.reveal(node, { select: true, focus: true, expand: true })
+                    await allRulesView?.reveal(node, {select: true, focus: true, expand: true})
                 } else if (type instanceof LanguageNode) {
                     node.collapsibleState = coc.TreeItemCollapsibleState.Expanded
                     allRulesTreeDataProvider.register(node)
-                    await allRulesView?.reveal(node, { select: true, focus: true, expand: true })
+                    await allRulesView?.reveal(node, {select: true, focus: true, expand: true})
                 } else {
                     coc.window.showWarningMessage(`Unable to find or resolve rule id ${ruleKey}`)
                 }
@@ -295,10 +299,10 @@ function registerCommands(context: coc.ExtensionContext) {
 
     context.subscriptions.push(
         coc.commands.registerCommand(Commands.INSTALL_MANAGED_JRE, () => {
-            installManagedJre(context, function() {
+            installManagedJre(context, function () {
                 coc.window
                     .showInformationMessage(`Downloaded & installed a managed jre`)
-            }, function() {
+            }, function () {
                 coc.window
                     .showErrorMessage(`Unable to download managed jre`)
             })
@@ -307,13 +311,42 @@ function registerCommands(context: coc.ExtensionContext) {
 
 }
 
-function installCustomRequestHandlers(context: coc.ExtensionContext) {
+function installCustomRequestHandlers() {
     languageClient.onNotification(
         protocol.ShowRuleDescriptionNotification.type,
         showRuleDescription(floatDescriptionFactory),
     )
-    languageClient.onRequest(protocol.GetJavaConfigRequest.type, (fileUri) =>
-        getJavaConfig(languageClient, fileUri),
+    languageClient.onRequest(protocol.ListFilesInFolderRequest.type, (params: protocol.FolderUriParams) => {
+        const files: any[] = []
+        const folderCrawler = (dir: string) => {
+            let elements: string[] = []
+            try {
+                elements = FS.readdirSync(dir)
+            } catch (error) {
+                logToSonarLintOutput(`Failed to read dir ${dir} due to ${error}`)
+            }
+            for (const elem of elements) {
+                try {
+                    const full = path.join(dir, elem)
+                    const stat = FS.statSync(full)
+                    if (stat.isFile()) {
+                        files.push({
+                            filePath: full,
+                            fileName: elem
+                        })
+                    } else if (!elem.startsWith(".")) {
+                        folderCrawler(full)
+                    }
+                } catch (error) {
+                    logToSonarLintOutput(`Failed to stat ${elem} due to ${error}`)
+                }
+            }
+        }
+        folderCrawler(coc.Uri.parse(params.folderUri).fsPath)
+        return {foundFiles: files}
+    })
+    languageClient.onRequest(protocol.GetJavaConfigRequest.type, (params) =>
+        getJavaConfig(languageClient, params),
     )
     languageClient.onRequest(protocol.ScmCheckRequest.type, (params) =>
         util.shouldIgnoreBySourceControl(params),
@@ -325,7 +358,7 @@ function installCustomRequestHandlers(context: coc.ExtensionContext) {
         util.shouldAnalyseFile(params.uri),
     )
     languageClient.onRequest(
-        protocol.CanShowMissingRequirementNotification.type, () => { return true })
+        protocol.CanShowMissingRequirementNotification.type, () => {return true})
     languageClient.onNotification(
         protocol.ShowSonarLintOutputNotification.type,
         () => void coc.commands.executeCommand(Commands.SHOW_SONARLINT_OUTPUT),
@@ -372,7 +405,7 @@ async function showAllLocations(issue: protocol.Issue) {
                     character: textRange.endLineOffset,
                 } as Position,
             }
-            locations.push({ uri: loc.uri, range: range } as Location)
+            locations.push({uri: loc.uri, range: range} as Location)
         }),
     )
 
@@ -406,7 +439,7 @@ export async function showRulesView(title: string) {
         const tabnr = await nvim.call('tabpagenr') as number
         const buflist = await nvim.call('tabpagebuflist', [tabnr]) as number[]
         const bufId = await nvim.call('winbufnr', [winId])
-        const found = buflist.find((bufnr) => { return bufId == bufnr })
+        const found = buflist.find((bufnr) => {return bufId == bufnr})
         if (!found) {
             await nvim.call('coc#window#close', [winId])
             await allRulesView?.show('botright 10split')

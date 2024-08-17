@@ -1,14 +1,12 @@
 {
     "name": "coc-sonarlint",
-    "version": "0.0.13",
-    "description": "sonarlint for coc.nvim",
-    "author": "asmodeus812",
+    "version": "0.0.14",
+    "description": "Coc sonar lint language server extension client",
     "license": "MIT",
     "main": "lib/index.js",
     "keywords": [
         "coc.nvim"
     ],
-
     "engines": {
         "coc": "^0.0.82"
     },
@@ -72,8 +70,6 @@
         "onLanguage:typescriptreact",
         "onLanguage:jsx-tags",
         "onLanguage:jsonc",
-        "workspaceContains:*/pom.xml",
-        "workspaceContains:build.gradle",
         "workspaceContains:.sonar.properties"
     ],
     "contributes": {
@@ -306,7 +302,7 @@
                 "sonarlint.analysisExcludesStandalone": {
                     "order": 13,
                     "type": "string",
-                    "default": "",
+                    "default": "(node_modules|.git|.svn|.hg|.idea|.vscode)/**",
                     "markdownDescription": "Files whose name match this [glob pattern](https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob) will not be processed by analyzers. In [Connected Mode](command:SonarLint.HelpAndFeedbackLinkClicked?%22connectedModeDocs%22) with SonarQube or SonarCloud, this property will be ignored and server exclusion settings will be applied. No rules are evaluated on excluded files. Example: `**/lib/**,**/*generated*`",
                     "scope": "resource"
                 },
@@ -420,54 +416,44 @@
         },
         "commands": [
             {
-                "command": "SonarLint.ShowSonarLintOutput",
-                "title": "Show SonarLint Output",
-                "category": "SonarLint"
+                "command": "sonarlint.show.sonar.lint.output",
+                "title": "Show sonarlint Output"
             },
             {
-                "command": "SonarLint.EnableVerboseLogs",
-                "title": "Enable Verbose Logging",
-                "category": "SonarLint"
+                "command": "sonarlint.enable.verbose.logs",
+                "title": "Enable Verbose Logging"
             },
             {
-                "command": "SonarLint.InstallManagedJre",
-                "title": "Install the managed java runtime binaries",
-                "category": "SonarLint"
+                "command": "sonarlint.install.managed.jre",
+                "title": "Install managed java runtime binaries"
             },
             {
-                "command": "SonarLint.ConfigureCompilationDatabase",
-                "title": "Configure the compilation database for C and C++ analysis",
-                "category": "SonarLint"
+                "command": "sonarlint.configure.compilation.database",
+                "title": "Configure compilation database for C/C++ analysis"
             },
             {
-                "command": "SonarLint.DeactivateRule",
-                "title": "Deactivate",
-                "enablement": "view == SonarLint.AllRules"
+                "command": "sonarlint.deactivate.rule",
+                "title": "Deactivate sonar rule"
             },
             {
-                "command": "SonarLint.ActivateRule",
-                "title": "Activate",
-                "enablement": "view == SonarLint.AllRules"
+                "command": "sonarlint.activate.rule",
+                "title": "Activate sonar rule"
             },
             {
-                "command": "SonarLint.ShowAllRules",
-                "title": "All",
-                "enablement": "view == SonarLint.AllRules"
+                "command": "sonarlint.show.all.rules",
+                "title": "Show all rules"
             },
             {
-                "command": "SonarLint.ShowActiveRules",
-                "title": "Active",
-                "enablement": "view == SonarLint.AllRules"
+                "command": "sonarlint.show.active.rules",
+                "title": "Show active rules"
             },
             {
-                "command": "SonarLint.ShowInactiveRules",
-                "title": "Inactive",
-                "enablement": "view == SonarLint.AllRules"
+                "command": "sonarlint.show.inactive.rules",
+                "title": "Show inactive rules"
             },
             {
-                "command": "SonarLint.FindRuleByKey",
-                "title": "Find Rule By Key",
-                "enablement": "view == SonarLint.AllRules"
+                "command": "sonarlint.find.rule.by.key",
+                "title": "Find Rule By Key"
             }
         ]
     }

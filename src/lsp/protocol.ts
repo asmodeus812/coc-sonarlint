@@ -45,7 +45,7 @@ export namespace ListFilesInFolderRequest {
     export const type = new coc.RequestType<
         FolderUriParams,
         ListFilesInScopeResponse,
-        void
+        List
     >("sonarlint/listFilesInFolder")
 }
 
