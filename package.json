@@ -4,6 +4,10 @@
     "description": "Coc sonar lint language server extension client",
     "license": "MIT",
     "main": "lib/index.js",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/asmodeus812/coc-sonarlint"
+    },
     "keywords": [
         "coc.nvim"
     ],
