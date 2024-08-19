@@ -1,6 +1,6 @@
 {
     "name": "coc-sonarlint",
-    "version": "0.0.15",
+    "version": "0.0.16",
     "description": "Coc sonar lint language server extension client",
     "license": "MIT",
     "main": "lib/index.js",
@@ -44,6 +44,9 @@
         "onLanguage:c",
         "onLanguage:cpp",
         "onLanguage:cuda",
+        "onLanguage:yaml",
+        "onLanguage:json",
+        "onLanguage:jsonc",
         "onLanguage:objc",
         "onLanguage:objcpp",
         "onLanguage:opencl",
@@ -61,6 +64,7 @@
         "onLanguage:gomod",
         "onLanguage:python",
         "onLanguage:jupyter",
+        "onLanguage:jsx-tags",
         "onLanguage:javascript",
         "onLanguage:javascriptreact",
         "onLanguage:javascript.jsx",
@@ -68,8 +72,6 @@
         "onLanguage:typescript.tsx",
         "onLanguage:typescript.jsx",
         "onLanguage:typescriptreact",
-        "onLanguage:jsx-tags",
-        "onLanguage:jsonc",
         "workspaceContains:.sonar.properties"
     ],
     "contributes": {

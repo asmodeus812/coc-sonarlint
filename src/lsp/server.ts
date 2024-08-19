@@ -9,10 +9,10 @@
 import * as fs from 'fs'
 import * as Path from "path"
 import * as coc from "coc.nvim"
-import { getSonarLintConfiguration } from "../settings/settings"
-import { RequirementsData } from "../util/requirements"
+import {getSonarLintConfiguration} from "../settings/settings"
+import {RequirementsData} from "../util/requirements"
 import * as util from "../util/util"
-import { logToSonarLintOutput } from 'coc-sonarlint/src/util/logging'
+import {logToSonarLintOutput} from 'coc-sonarlint/src/util/logging'
 
 declare let v8debug: object
 const DEBUG = typeof v8debug === "object" || util.startedInDebugMode(process)
@@ -47,39 +47,27 @@ export function languageServerCommand(
 
     const params: string[] = []
     if (DEBUG) {
-        params.push(
-            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000,quiet=y",
-        )
-        params.push("-Dsonarlint.telemetry.disabled=true")
+        params.push("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000,quiet=y",)
     }
+    params.push("-Dsonarlint.telemetry.disabled=true")
+
     const vmargs = getSonarLintConfiguration().get("ls.vmargs", "")
     parseVMargs(params, vmargs)
     params.push("-jar", serverJar)
     params.push("-stdio")
     params.push("-analyzers")
     params.push(Path.resolve(location, "analyzers", "sonargo.jar"))
-    params.push(
-        Path.resolve(location, "analyzers", "sonarjava.jar"),
-    )
+    params.push(Path.resolve(location, "analyzers", "sonarjava.jar"),)
     params.push(Path.resolve(location, "analyzers", "sonarjs.jar"))
     params.push(Path.resolve(location, "analyzers", "sonarphp.jar"))
-    params.push(
-        Path.resolve(location, "analyzers", "sonarpython.jar"),
-    )
-    params.push(
-        Path.resolve(location, "analyzers", "sonarhtml.jar"),
-    )
+    params.push(Path.resolve(location, "analyzers", "sonarpython.jar"),)
+    params.push(Path.resolve(location, "analyzers", "sonarhtml.jar"),)
     params.push(Path.resolve(location, "analyzers", "sonarxml.jar"))
-    params.push(
-        Path.resolve(location, "analyzers", "sonarcfamily.jar"),
-    )
-    params.push(
-        Path.resolve(location, "analyzers", "sonartext.jar"),
-    )
+    params.push(Path.resolve(location, "analyzers", "sonarcfamily.jar"),)
+    params.push(Path.resolve(location, "analyzers", "sonartext.jar"),)
     params.push(Path.resolve(location, "analyzers", "sonariac.jar"))
-    params.push(
-        Path.resolve(location, "analyzers", "sonarlintomnisharp.jar"),
-    )
+    params.push(Path.resolve(location, "analyzers", "sonarlintomnisharp.jar"),)
+    // params.push(Path.resolve(location, "analyzers", "sonarjavasymbolicexecution.java"),)
 
     return {
         command: javaExecutablePath,
@@ -98,7 +86,7 @@ export function parseVMargs(params: string[], vmargsLine: string) {
     }
     vmargs.forEach((arg) => {
         //remove all standalone double quotes
-        arg = arg.replace(/(\\)?"/g, function($0, $1) {
+        arg = arg.replace(/(\\)?"/g, function ($0, $1) {
             return $1 ? $0 : ""
         })
         //unescape all escaped double quotes
