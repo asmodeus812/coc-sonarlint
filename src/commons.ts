@@ -4,6 +4,7 @@
  * sonarlint@sonarsource.com
  * Licensed under the LGPLv3 License. See LICENSE.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+export const DEFAULT_CONNECTION_ID = '<default>';
 
 export namespace SonarLintDocumentation {
     export const BASE_DOCS_URL = "https://docs.sonarsource.com/sonarlint/vs-code/"

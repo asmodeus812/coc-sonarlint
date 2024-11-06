@@ -1,6 +1,6 @@
 {
     "name": "coc-sonarlint",
-    "version": "0.0.16",
+    "version": "0.0.18",
     "description": "Coc sonar lint language server extension client",
     "license": "MIT",
     "main": "lib/index.js",
@@ -309,7 +309,7 @@
                 "sonarlint.listFilesFoldersExclusions": {
                     "order": 13,
                     "type": "array",
-                    "default": [ 
+                    "default": [
                         "node_modules",
                         "target",
                         ".settings",

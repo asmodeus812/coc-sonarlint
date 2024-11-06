@@ -42,6 +42,8 @@ import {
     configureCompilationDatabase,
     notifyMissingCompileCommands,
 } from "./cfamily/cfamily"
+import {showSslCertificateConfirmationDialog} from "coc-sonarlint/src/util/showMessage"
+import {ConnectionSettingsService} from "coc-sonarlint/src/settings/connectionsettings"
 
 const DOCUMENT_SELECTOR = [
     {
@@ -58,6 +60,7 @@ const DOCUMENT_SELECTOR = [
 ]
 
 let languageClient: SonarLintExtendedLanguageClient
+let connectionSettingsService: ConnectionSettingsService
 let allRulesTreeDataProvider: AllRulesTreeDataProvider
 let allRulesView: coc.TreeView<LanguageNode>
 let floatDescriptionFactory: coc.FloatFactory
@@ -145,6 +148,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         serverOptions,
         clientOptions,
     )
+    connectionSettingsService = new ConnectionSettingsService(languageClient);
 
     await languageClient.start()
     coc.services.registerLanguageClient(languageClient)
@@ -361,6 +365,20 @@ function installCustomRequestHandlers() {
     languageClient.onRequest(protocol.ShouldAnalyseFileCheck.type, (params) =>
         util.shouldAnalyseFile(params.uri),
     )
+    languageClient.onRequest(protocol.SslCertificateConfirmation.type, cert =>
+        showSslCertificateConfirmationDialog(cert)
+    );
+    languageClient.onRequest(protocol.GetTokenForServer.type, serverId =>
+        connectionSettingsService.getServerToken(serverId),
+    );
+    languageClient.onNotification(protocol.ReportConnectionCheckResult.type, result => {
+        connectionSettingsService.reportConnectionCheckResult(result);
+        if (result.success) {
+            coc.window.showInformationMessage(`Connection for sonar qube/cloud with id '${result.connectionId}' was successful!`);
+        } else {
+            coc.window.showErrorMessage(`Connection with id '${result.connectionId}' failed, due to ${result.reason}. Please check your settings.`);
+        }
+    });
     languageClient.onRequest(
         protocol.CanShowMissingRequirementNotification.type, () => {return true})
     languageClient.onNotification(
