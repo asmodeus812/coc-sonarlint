@@ -365,6 +365,9 @@ function installCustomRequestHandlers() {
     languageClient.onRequest(protocol.ShouldAnalyseFileCheck.type, (params) =>
         util.shouldAnalyseFile(params.uri),
     )
+    languageClient.onRequest(protocol.isOpenInEditor.type, (fileUri) =>
+        util.isOpenInEditor(fileUri),
+    )
     languageClient.onRequest(protocol.SslCertificateConfirmation.type, cert =>
         showSslCertificateConfirmationDialog(cert)
     );

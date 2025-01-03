@@ -264,6 +264,10 @@ export interface ShouldAnalyseFileCheckResult {
     reason?: string
 }
 
+export namespace IsOpenInEditor {
+  export const type = new coc.RequestType<string, boolean, void>('sonarlint/isOpenInEditor');
+}
+
 export namespace ShouldAnalyseFileCheck {
     export const type = new coc.RequestType<
         UriParams,

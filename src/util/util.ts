@@ -157,7 +157,7 @@ export function filterOutFilesIgnoredForAnalysis(fileUris: string[]): FileUris {
     return { fileUris: filteredFiles }
 }
 
-function isOpenInEditor(fileUri: string) {
+export function isOpenInEditor(fileUri: string) {
     const url = coc.Uri.parse(fileUri)
     const codeFileUri = url.toString()
     return coc.workspace.textDocuments.some(d => d.uri.toString() === codeFileUri)
