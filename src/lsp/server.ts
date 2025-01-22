@@ -12,7 +12,7 @@ import * as coc from "coc.nvim"
 import {getSonarLintConfiguration} from "../settings/settings"
 import {RequirementsData} from "../util/requirements"
 import * as util from "../util/util"
-import {logToSonarLintOutput} from 'coc-sonarlint/src/util/logging'
+import {logToSonarLintOutput} from '../util/logging'
 
 declare let v8debug: object
 const DEBUG = typeof v8debug === "object" || util.startedInDebugMode(process)

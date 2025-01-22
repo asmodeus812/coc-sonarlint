@@ -42,8 +42,8 @@ import {
     configureCompilationDatabase,
     notifyMissingCompileCommands,
 } from "./cfamily/cfamily"
-import {showSslCertificateConfirmationDialog} from "coc-sonarlint/src/util/showMessage"
-import {ConnectionSettingsService} from "coc-sonarlint/src/settings/connectionsettings"
+import {showSslCertificateConfirmationDialog} from "./util/showMessage"
+import {ConnectionSettingsService} from "./settings/connectionsettings"
 
 const DOCUMENT_SELECTOR = [
     {

@@ -11,12 +11,10 @@ import expandHomeDir from "expand-home-dir"
 import findJavaHome from "find-java-home"
 import * as fse from "fs-extra"
 import * as path from "path"
-import * as jre from '../java/jre'
 import pathExists from "path-exists"
 import * as coc from "coc.nvim"
 import { Commands } from "./commands"
 import { logToSonarLintOutput } from "./logging"
-import { PlatformInformation } from 'coc-sonarlint/src/util/platform'
 import { checkAndDownloadJRE } from '../java/jre'
 
 const REQUIRED_JAVA_VERSION = 17

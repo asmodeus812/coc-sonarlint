@@ -9,7 +9,7 @@
 import * as coc from "coc.nvim"
 import { ConfigLevel, Rule, RulesResponse } from "../lsp/protocol"
 import { getSonarLintConfiguration } from "../settings/settings"
-import { capitalizeName } from "coc-sonarlint/src/util/webview"
+import { capitalizeName } from "../util/webview"
 
 function isActive(rule: Rule) {
     return (
