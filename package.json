@@ -1,6 +1,6 @@
 {
     "name": "coc-sonarlint",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Coc sonar lint language server extension client",
     "license": "MIT",
     "main": "lib/index.js",
@@ -25,21 +25,12 @@
         "node-html-parser": "6.1.13"
     },
     "devDependencies": {
-        "@types/fs-extra": "^8.0.0",
-        "@types/vscode": "^1.73.1",
-        "@types/glob": "5.0.30",
-        "@types/semver": "^7.3.8",
-        "@types/winreg": "^1.2.30",
-        "@types/node": "^14.14",
-        "@types/marked": "^4.0.1",
-        "@types/uuid": "^8.3.0",
-        "typescript": "^4.9.4",
-        "coc.nvim": "^0.0.83-next.17",
         "vscode-languageserver-protocol": "^3.17.2",
-        "esbuild": "^0.15.13",
-        "compare-versions": "4.1.3",
+        "coc.nvim": "^0.0.83-next.18",
+        "compare-versions": "^4.1.3",
         "expand-home-dir": "^0.0.3",
-        "find-java-home": "1.2.2",
+        "find-java-home": "^1.2.2",
+        "esbuild": "^0.15.13",
         "fs-extra": "^8.1.0",
         "path-exists": "4.0.0",
         "jdk-utils": "^0.5.1"
