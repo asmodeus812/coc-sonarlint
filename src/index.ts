@@ -49,14 +49,7 @@ const DOCUMENT_SELECTOR = [
     {
         scheme: "file",
         pattern: "**/*",
-    },
-    {
-        notebook: {
-            scheme: "file",
-            notebookType: "jupyter-notebook",
-        },
-        language: "python",
-    },
+    }
 ]
 
 let languageClient: SonarLintExtendedLanguageClient
@@ -109,10 +102,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
     const serverOptions = () => runJavaServer(context)
 
-    const pythonWatcher = coc.workspace.createFileSystemWatcher("**/*.py")
     const sharedConnectedModeConfigurationWatcher =
         coc.workspace.createFileSystemWatcher("**/.sonarlint/*.json")
-    context.subscriptions.push(pythonWatcher)
     context.subscriptions.push(sharedConnectedModeConfigurationWatcher)
 
     // Options to control the language client
@@ -120,7 +111,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         documentSelector: DOCUMENT_SELECTOR,
         synchronize: {
             configurationSection: "sonarlint",
-            fileEvents: [pythonWatcher, sharedConnectedModeConfigurationWatcher],
+            fileEvents: [sharedConnectedModeConfigurationWatcher],
         },
         diagnosticCollectionName: "sonarlint",
         initializationOptions: () => {
@@ -495,4 +486,3 @@ export function toUrl(filePath: string) {
 
     return encodeURI("file://" + pathName)
 }
-
