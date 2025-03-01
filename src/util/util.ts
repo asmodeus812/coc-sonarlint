@@ -138,14 +138,14 @@ export function shouldIgnoreBySourceControl(_: string): boolean {
 export function shouldAnalyseFile(fileUriStr: string): ShouldAnalyseFileCheckResult {
     const isOpen = isOpenInEditor(fileUriStr)
     if (!isOpen) {
-        return { shouldBeAnalysed: false, reason: 'Skipping analysis for the file preview: ' }
+        return { shouldBeAnalysed: false, reason: 'Skipping analysis for the file preview' }
     }
     const fileUri = coc.Uri.parse(fileUriStr)
     const workspaceFolderConfig = coc.workspace.getConfiguration()
     const excludes: string | undefined = workspaceFolderConfig.get(ANALYSIS_EXCLUDES)
     const excludesArray = excludes?.split(',').map(it => it.trim())
     const filteredFile = getFilesNotMatchedGlobPatterns([fileUri], excludesArray ?? [])
-    return { shouldBeAnalysed: filteredFile.length === 1, reason: 'Skipping analysis for the excluded file: ' }
+    return { shouldBeAnalysed: filteredFile.length === 1, reason: 'Skipping analysis for the excluded file' }
 }
 
 export function filterOutFilesIgnoredForAnalysis(fileUris: string[]): FileUris {
