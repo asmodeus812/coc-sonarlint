@@ -1,6 +1,6 @@
 {
     "name": "coc-sonarlint",
-    "version": "0.2.8",
+    "version": "0.2.9",
     "description": "Coc sonar lint language server extension client",
     "license": "MIT",
     "main": "lib/index.js",
