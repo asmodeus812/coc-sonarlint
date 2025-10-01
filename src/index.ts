@@ -127,6 +127,19 @@ export async function activate(context: ExtensionContext): Promise<void> {
                 clientNodePath: coc.workspace
                     .getConfiguration()
                     .get("sonarlint.pathToNodeExecutable"),
+                csharpEnterprisePath: Path.resolve(
+                    context.extensionPath,
+                    "analyzers",
+                    "csharpenterprise.jar",
+                ),
+                connections: coc.workspace
+                    .getConfiguration("sonarlint.connectedMode")
+                    .get("connections", { sonarqube: [], sonarcloud: [] }),
+                rules: coc.workspace
+                    .getConfiguration("sonarlint").get("rules", {}),
+                focusOnNewCode: coc.workspace
+                    .getConfiguration("sonarlint")
+                    .get("focusOnNewCode", false),
             }
         },
         outputChannel: getLogOutput(),
