@@ -132,6 +132,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
                     "analyzers",
                     "csharpenterprise.jar",
                 ),
+                automaticAnalysis: true,
                 connections: coc.workspace
                     .getConfiguration("sonarlint.connectedMode")
                     .get("connections", { sonarqube: [], sonarcloud: [] }),
@@ -368,6 +369,9 @@ function installCustomRequestHandlers() {
     )
     languageClient.onRequest(protocol.ShouldAnalyseFileCheck.type, (params) =>
         util.shouldAnalyseFile(params.uri),
+    )
+    languageClient.onRequest(protocol.IsOpenInEditor.type, (fileUri) =>
+        util.isOpenInEditor(fileUri),
     )
     languageClient.onRequest(protocol.SslCertificateConfirmation.type, cert =>
         showSslCertificateConfirmationDialog(cert)
