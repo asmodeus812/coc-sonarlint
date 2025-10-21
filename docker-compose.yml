@@ -1,0 +1,56 @@
+version: "3.8"
+name: sonarqube-stack
+
+networks:
+  sonar-net:
+
+volumes:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
+  sonarqube_dbdata:
+
+services:
+  db:
+    image: postgres:15
+    container_name: sonar-db
+    networks: [sonar-net]
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonarpass
+      POSTGRES_DB: sonarqube
+    volumes:
+      - sonarqube_dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar -d sonarqube"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  sonarqube:
+    image: sonarqube:lts-community
+    container_name: sonarqube
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [sonar-net]
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonar-db:5432/sonarqube
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonarpass
+      # Optional: tune JVM if needed (example: ~2G heap)
+      # SONAR_SEARCH_JAVAADDITIONALOPTS: "-Xms1g -Xmx1g"
+      # SONAR_WEB_JAVAADDITIONALOPTS: "-Xms512m -Xmx512m"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9000 | grep -q 'SonarQube'"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+    restart: unless-stopped

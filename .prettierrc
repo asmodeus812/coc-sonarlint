@@ -1,0 +1,57 @@
+{
+    "bracketSpacing": true,
+    "printWidth": 140,
+    "singleQuote": false,
+    "trailingComma": "none",
+    "useTabs": false,
+    "tabWidth": 4,
+    "semi": true,
+    "arrowParens": "always",
+    "endOfLine": "lf",
+    "proseWrap": "preserve",
+    "quoteProps": "as-needed",
+    "bracketSameLine": true,
+    "jsxSingleQuote": false,
+    "vueIndentScriptAndStyle": true,
+    "embeddedLanguageFormatting": "auto",
+    "htmlWhitespaceSensitivity": "css",
+    "overrides": [
+        {
+            "files": ["*.md", "*.mdx"],
+            "options": {
+                "printWidth": 80,
+                "proseWrap": "always"
+            }
+        },
+        {
+            "files": ["*.yml", "*.yaml"],
+            "options": {
+                "tabWidth": 2,
+                "printWidth": 120,
+                "trailingComma": "none"
+            }
+        },
+        {
+            "files": ["*.json", "*.jsonc", "*.json5"],
+            "options": {
+                "tabWidth": 4,
+                "printWidth": 120,
+                "trailingComma": "none"
+            }
+        },
+        {
+            "files": ["*.gql", "*.graphql"],
+            "options": {
+                "tabWidth": 4,
+                "printWidth": 100
+            }
+        },
+        {
+            "files": ["*.html", "*.vue", "*.svelte", "*.astro"],
+            "options": {
+                "bracketSameLine": false,
+                "singleAttributePerLine": true
+            }
+        }
+    ]
+}

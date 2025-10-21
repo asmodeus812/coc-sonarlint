@@ -1,117 +1,179 @@
 /* --------------------------------------------------------------------------------------------
- * SonarLint for VisualStudio Code
- * Copyright (C) 2017-2024 SonarSource SA
+ * Sonarlint
+ * Copyright (C) 2017-2025 SonarSource SA
  * sonarlint@sonarsource.com
  * Licensed under the LGPLv3 License. See LICENSE.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */import Path from "path"
-import * as FS from 'fs'
-import * as path from 'path'
-import * as util from "./util/util"
-import * as protocol from "./lsp/protocol"
+ * ------------------------------------------------------------------------------------------ */
+"use strict";
+
+// Must be kept at the top for Node instrumentation to work correctly
+
 import * as ChildProcess from "child_process"
-import type {Position, Location} from "vscode-languageserver-types"
-import {ExtensionContext, StreamInfo, nvim, window} from "coc.nvim"
 import * as coc from "coc.nvim"
+import { DateTime } from "luxon"
+import * as Path from "path"
+import { introduceSonarQubeRulesFile, openSonarQubeRulesFile } from "./aiAgentsConfiguration/aiAgentRuleConfig"
 import {
-    updateVerboseLogging,
-    isVerboseEnabled,
-    isNotificationEnabled
-} from "./settings/settings"
+    AIAgentsConfigurationItem,
+    AIAgentsConfigurationTreeDataProvider
+} from "./aiAgentsConfiguration/aiAgentsConfigurationTreeDataProvider"
+import { configureMCPServer, onEmbeddedServerStarted, openMCPServerConfigurationFile } from "./aiAgentsConfiguration/mcpServerConfig"
+import { configureCompilationDatabase, notifyMissingCompileCommands } from "./cfamily/cfamily"
+import { assistCreatingConnection } from "./connected/assistCreatingConnection"
+import { AutoBindingService } from "./connected/autobinding"
+import { BindingService, showSoonUnsupportedVersionMessage } from "./connected/binding"
+import { showConnectionDetails } from "./connected/connectionpanel"
+import { AllConnectionsTreeDataProvider, ConnectionsNode, ConnectionType } from "./connected/connections"
+import { connectToSonarCloud, connectToSonarQube } from "./connected/connectionsetup"
+import { SharedConnectedModeSettingsService } from "./connected/sharedConnectedModeSettingsService"
+import { FileSystemServiceImpl } from "./fileSystem/fileSystemServiceImpl"
+import { FindingsTreeDataProvider, FindingsTreeViewItem } from "./findings/findingsTreeDataProvider"
+import { FilterType, FindingType, getFilterDisplayName, selectAndApplyCodeAction } from "./findings/findingsTreeDataProviderUtil"
+import { FindingNode } from "./findings/findingTypes/findingNode"
+import { NotebookFindingNode } from "./findings/findingTypes/notebookFindingNode"
+import { FixSuggestionService } from "./fixSuggestions/fixSuggestionsService"
+import { HelpAndFeedbackItem } from "./help/constants"
+import { HelpAndFeedbackLink, HelpAndFeedbackTreeDataProvider } from "./help/helpAndFeedbackTreeDataProvider"
 import {
-    getLogOutput,
-    initLogOutput,
-    logToSonarLintOutput,
-    showLogOutput,
-} from "./util/logging"
-import {setExtensionContext} from "./util/util"
-import {languageServerCommand} from "./lsp/server"
-import {JAVA_HOME_CONFIG, installManagedJre, resolveRequirements} from "./util/requirements"
-import {SonarLintExtendedLanguageClient} from "./lsp/client"
-import {getPlatform} from "./util/platform"
-import {Commands} from "./util/commands"
-import {
-    AllRulesTreeDataProvider,
-    LanguageNode,
-    RuleNode,
-    languageKeyDeNormalization,
-    toggleRule,
-} from "./rules/rules"
-import {getJavaConfig, installClasspathListener} from "./java/java"
-import {showRuleDescription} from "./rules/rulepanel"
-import {
-    configureCompilationDatabase,
-    notifyMissingCompileCommands,
-} from "./cfamily/cfamily"
-import {showSslCertificateConfirmationDialog} from "./util/showMessage"
-import {ConnectionSettingsService} from "./settings/connectionsettings"
+    changeHotspotStatus,
+    getFilesForHotspotsAndLaunchScan,
+    showHotspotDescription,
+    showHotspotDetails,
+    showSecurityHotspot,
+    useProvidedFolderOrPickManuallyAndScan
+} from "./hotspot/hotspots"
+import { IssueService } from "./issue/issue"
+import { resolveIssueMultiStepInput } from "./issue/resolveIssue"
+import { getJavaConfig, installClasspathListener } from "./java/java"
+import { LocationTreeItem, navigateToLocation, SecondaryLocationsTree } from "./location/locations"
+import { SonarLintExtendedLanguageClient } from "./lsp/client"
+import { ConnectionCheckResult, ExtendedClient, ExtendedServer } from "./lsp/protocol"
+import { languageServerCommand } from "./lsp/server"
+import { NewCodeDefinitionService } from "./newcode/newCodeDefinitionService"
+import { maybeShowWiderLanguageSupportNotification } from "./promotions/promotionalNotifications"
+import { showRuleDescription } from "./rules/rulepanel"
+import { AllRulesNode, AllRulesTreeDataProvider, setRulesViewMessage, toggleRule, userNormalizedLanguageKey } from "./rules/rules"
+import { showNotificationForFirstSecretsIssue } from "./secrets/secrets"
+import { AutomaticAnalysisService } from "./settings/automaticAnalysis"
+import { ConnectionSettingsService } from "./settings/connectionsettings"
+import { enableVerboseLogs, isVerboseEnabled, loadInitialSettings, onConfigurationChange } from "./settings/settings"
+import { getConnectionIdForFile } from "./util/bindingUtils"
+import { Commands } from "./util/commands"
+import { getLogOutput, initLogOutput, logToSonarLintOutput, showLogOutput } from "./util/logging"
+import { getPlatform } from "./util/platform"
+import { installManagedJre, JAVA_HOME_CONFIG, resolveRequirements } from "./util/requirements"
+import { CAN_SHOW_MISSING_REQUIREMENT_NOTIF, showSslCertificateConfirmationDialog } from "./util/showMessage"
+import * as util from "./util/util"
+import { filterOutFilesIgnoredForAnalysis, shouldAnalyseFile } from "./util/util"
+import { createBlendingBackgroundHighlight, createDefaultRenderingHighlights } from "./util/webview"
 
-const DOCUMENT_SELECTOR = [
-    {
-        scheme: "file",
-        pattern: "**/*",
+const DOCUMENT_SELECTOR = [{ scheme: "file", pattern: "**/*" }];
+
+let aiAgentsConfigurationTreeDataProvider: AIAgentsConfigurationTreeDataProvider;
+let allConnectionsTreeDataProvider: AllConnectionsTreeDataProvider;
+let allRulesTreeDataProvider: AllRulesTreeDataProvider;
+let findingsTreeDataProvider: FindingsTreeDataProvider;
+let helpAndFeedbackTreeDataProvider: HelpAndFeedbackTreeDataProvider;
+let languageClient: SonarLintExtendedLanguageClient;
+let secondaryLocationTreeDataProvider: SecondaryLocationsTree;
+
+let allConnectionsView: coc.TreeView<ConnectionsNode>;
+let allRulesView: coc.TreeView<AllRulesNode>;
+let findingsView: coc.TreeView<FindingsTreeViewItem>;
+let helpAndFeedbackView: coc.TreeView<HelpAndFeedbackLink>;
+let issueLocationsView: coc.TreeView<LocationTreeItem>;
+let aiAgentsConfigurationView: coc.TreeView<AIAgentsConfigurationItem>;
+
+let floatDescriptionFactory: coc.FloatFactory;
+
+const currentProgress: Record<string, { progress: coc.Progress<{ increment?: number }>; resolve: () => void } | undefined> = {};
+
+async function runJavaServer(context: coc.ExtensionContext): Promise<coc.StreamInfo> {
+    try {
+        const requirements = await resolveRequirements(context);
+        const { command, args } = await languageServerCommand(context, requirements);
+        logToSonarLintOutput(`Executing ${command} ${args.join(" ")}`);
+        const process = ChildProcess.spawn(command, args);
+        process.stderr.on("data", function (data) {
+            logWithPrefix(data, "[stderr]");
+        });
+        return {
+            reader: process.stdout,
+            writer: process.stdin
+        };
+    } catch (error) {
+        //show error
+        const errorPayload: any = error as any;
+        coc.window.showErrorMessage(errorPayload.message).then((selection) => {
+            if (errorPayload.label && errorPayload.label === selection && errorPayload.command) {
+                coc.commands.executeCommand(errorPayload.command, errorPayload.commandParam);
+            }
+        });
+        // rethrow to disrupt the chain.
+        throw error;
     }
-]
-
-let languageClient: SonarLintExtendedLanguageClient
-let connectionSettingsService: ConnectionSettingsService
-let allRulesTreeDataProvider: AllRulesTreeDataProvider
-let allRulesView: coc.TreeView<LanguageNode>
-let floatDescriptionFactory: coc.FloatFactory
-
-async function runJavaServer(
-    context: coc.ExtensionContext,
-): Promise<StreamInfo> {
-    return resolveRequirements(context)
-        .catch((error) => {
-            //show error
-            coc.window
-                .showErrorMessage(error.message, error.label)
-                .then((selection) => {
-                    if (error.label && error.label === selection && error.command) {
-                        coc.commands.executeCommand(error.command, error.commandParam)
-                    }
-                })
-            // rethrow to disrupt the chain.
-            throw error
-        })
-        .then((requirements) => {
-            return new Promise<StreamInfo>((resolve, reject) => {
-                const {command, args}: any = languageServerCommand(context, requirements)
-                if (!command) {
-                    reject(new Error("Failed to resolve launch command and args"))
-                    return
-                }
-                logToSonarLintOutput(`Executing ${command} ${args.join(" ")}`)
-                const process = ChildProcess.spawn(command, args)
-
-                process.stderr.on("data", function (data) {
-                    logWithPrefix(data, "[stderr]")
-                })
-
-                resolve({
-                    reader: process.stdout,
-                    writer: process.stdin,
-                })
-            })
-        })
 }
 
-export async function activate(context: ExtensionContext): Promise<void> {
-    setExtensionContext(context)
-    initLogOutput(context)
+function logWithPrefix(data: { toString: () => string }, prefix: string) {
+    if (isVerboseEnabled()) {
+        const lines: string[] = data.toString().split(/\r\n|\r|\n/);
+        lines.forEach((l: string) => {
+            if (l.length > 0) {
+                logToSonarLintOutput(`${prefix} ${l}`);
+            }
+        });
+    }
+}
 
-    const serverOptions = () => runJavaServer(context)
+export function toUrl(filePath: string) {
+    let pathName = Path.resolve(filePath).replace(/\\/g, "/");
 
-    const sharedConnectedModeConfigurationWatcher =
-        coc.workspace.createFileSystemWatcher("**/.sonarlint/*.json")
-    context.subscriptions.push(sharedConnectedModeConfigurationWatcher)
+    // Windows drive letter must be prefixed with a slash
+    if (!pathName.startsWith("/")) {
+        pathName = "/" + pathName;
+    }
+
+    return encodeURI("file://" + pathName);
+}
+
+export async function activate(context: coc.ExtensionContext) {
+    const installTimeKey = "install.time";
+    // context.globalState.setKeysForSync([installTimeKey]);
+    let installTime = context.globalState.get(installTimeKey);
+    if (!installTime) {
+        installTime = new Date().toISOString();
+        context.globalState.update(installTimeKey, installTime);
+    }
+
+    loadInitialSettings();
+    initLogOutput(context);
+    util.setExtensionContext(context);
+
+    floatDescriptionFactory = coc.window.createFloatFactory({});
+    context.subscriptions.push(floatDescriptionFactory);
+    await createDefaultRenderingHighlights();
+    await createBlendingBackgroundHighlight();
+
+    const serverOptions = () => runJavaServer(context);
+
+    const pythonWatcher = coc.workspace.createFileSystemWatcher("**/*.py");
+    const helmWatcher = coc.workspace.createFileSystemWatcher("**/*.{y?ml,tpl,txt,toml}");
+    const sharedConnectedModeConfigurationWatcher = coc.workspace.createFileSystemWatcher("**/.sonarlint/*.json");
+    context.subscriptions.push(pythonWatcher);
+    context.subscriptions.push(helmWatcher);
+    context.subscriptions.push(sharedConnectedModeConfigurationWatcher);
 
     // Options to control the language client
     const clientOptions: coc.LanguageClientOptions = {
+        middleware: {
+            handleDiagnostics: (uri, diagnostics, next) => {
+                FindingsTreeDataProvider.instance.updateIssues(uri.toString(), diagnostics);
+                next(uri, diagnostics); // Call the default handler
+            }
+        },
         documentSelector: DOCUMENT_SELECTOR,
         synchronize: {
-            configurationSection: "sonarlint",
-            fileEvents: [sharedConnectedModeConfigurationWatcher],
+            fileEvents: [pythonWatcher, helmWatcher, sharedConnectedModeConfigurationWatcher]
         },
         diagnosticCollectionName: "sonarlint",
         initializationOptions: () => {
@@ -119,384 +181,789 @@ export async function activate(context: ExtensionContext): Promise<void> {
                 productKey: "vscode",
                 productName: "SonarLint",
                 productVersion: "1.0.0",
-                showVerboseLogs: coc.workspace
-                    .getConfiguration()
-                    .get("sonarlint.output.showVerboseLogs", false),
+                workspaceName: coc.workspace.root,
+                // firstSecretDetected: isFirstSecretDetected(context),
+                showVerboseLogs: true, //coc.workspace.getConfiguration().get("sonarlint.output.showVerboseLogs", false),
                 platform: getPlatform(),
                 architecture: process.arch,
-                clientNodePath: coc.workspace
-                    .getConfiguration()
-                    .get("sonarlint.pathToNodeExecutable"),
-                csharpEnterprisePath: Path.resolve(
-                    context.extensionPath,
-                    "analyzers",
-                    "csharpenterprise.jar",
-                ),
-                automaticAnalysis: true,
+                // enableNotebooks: true,
+                // clientNodePath: coc.workspace.getConfiguration().get("sonarlint.pathToNodeExecutable"),
+                // eslintBridgeServerPath: Path.resolve(context.extensionPath, "eslint-bridge"),
+                omnisharpDirectory: Path.resolve(context.extensionPath, "omnisharp"),
+                csharpOssPath: Path.resolve(context.extensionPath, "analyzers", "sonarcsharp.jar"),
+                csharpEnterprisePath: Path.resolve(context.extensionPath, "analyzers", "csharpenterprise.jar"),
                 connections: coc.workspace
                     .getConfiguration("sonarlint.connectedMode")
                     .get("connections", { sonarqube: [], sonarcloud: [] }),
-                rules: coc.workspace
-                    .getConfiguration("sonarlint").get("rules", {}),
-                focusOnNewCode: coc.workspace
-                    .getConfiguration("sonarlint")
-                    .get("focusOnNewCode", false),
-            }
+                rules: coc.workspace.getConfiguration("sonarlint").get("rules", {}),
+                focusOnNewCode: coc.workspace.getConfiguration("sonarlint").get("focusOnNewCode", false),
+                automaticAnalysis: coc.workspace.getConfiguration("sonarlint").get("automaticAnalysis", true)
+            };
         },
         outputChannel: getLogOutput(),
-        revealOutputChannelOn: 4, // never
-    }
+        revealOutputChannelOn: 4 // never
+    };
 
-    languageClient = new SonarLintExtendedLanguageClient(
-        "sonarlint",
-        "SonarLint Language Server",
-        serverOptions,
-        clientOptions,
-    )
-    connectionSettingsService = new ConnectionSettingsService(languageClient);
+    // Create the language client and start the client.
+    // id parameter is used to load 'sonarlint.trace.server' configuration
+    languageClient = new SonarLintExtendedLanguageClient("sonarlint", "SonarLint Language Server", serverOptions, clientOptions);
 
-    await languageClient.start()
-    coc.services.registerLanguageClient(languageClient)
+    await languageClient.start();
 
-    allRulesTreeDataProvider = new AllRulesTreeDataProvider(
-        () => languageClient.listAllRules(),
-        new Map(),
-    )
-    allRulesView = coc.window.createTreeView("Sonarlint rules", {
-        bufhidden: 'hide',
-        treeDataProvider: allRulesTreeDataProvider,
-    })
-    allRulesView.onDidCollapseElement((n) => {
-        allRulesTreeDataProvider.register(n.element)
-    })
-    allRulesView.onDidExpandElement((n) => {
-        allRulesTreeDataProvider.register(n.element)
-    })
-    context.subscriptions.push(allRulesView)
+    ConnectionSettingsService.init(context, languageClient);
+    NewCodeDefinitionService.init(context, languageClient);
+    FileSystemServiceImpl.init();
+    SharedConnectedModeSettingsService.init(languageClient, FileSystemServiceImpl.instance, context, floatDescriptionFactory);
+    BindingService.init(
+        languageClient,
+        context.workspaceState,
+        ConnectionSettingsService.instance,
+        SharedConnectedModeSettingsService.instance
+    );
+    AutoBindingService.init(
+        BindingService.instance,
+        context.workspaceState,
+        ConnectionSettingsService.instance,
+        FileSystemServiceImpl.instance,
+        languageClient
+    );
+    FixSuggestionService.init(languageClient);
+    FindingsTreeDataProvider.init(languageClient);
 
-    floatDescriptionFactory = window.createFloatFactory({
-        preferTop: true,
-        autoHide: true,
-        modes: ["n"],
-    })
-    context.subscriptions.push(floatDescriptionFactory)
-    installCustomRequestHandlers()
+    findingsTreeDataProvider = FindingsTreeDataProvider.instance;
+    findingsView = coc.window.createTreeView("SonarQube.Findings", {
+        bufhidden: "hide",
+        treeDataProvider: findingsTreeDataProvider
+    });
+    context.subscriptions.push(findingsView);
+
+    context.subscriptions.push(
+        coc.extensions.onDidLoadExtension(() => {
+            installClasspathListener(languageClient);
+        })
+    );
+    installClasspathListener(languageClient);
+    installCustomRequestHandlers(context);
+
+    coc.window.onDidChangeActiveTextEditor((e) => {
+        FindingsTreeDataProvider.instance.refresh();
+    });
+
+    allRulesTreeDataProvider = new AllRulesTreeDataProvider(() => languageClient.listAllRules());
+    allRulesView = coc.window.createTreeView("SonarLint.AllRules", {
+        bufhidden: "hide",
+        treeDataProvider: allRulesTreeDataProvider
+    });
+    setRulesViewMessage(allRulesView);
+    context.subscriptions.push(allRulesView);
+
+    secondaryLocationTreeDataProvider = new SecondaryLocationsTree();
+    issueLocationsView = coc.window.createTreeView("SonarLint.IssueLocations", {
+        bufhidden: "hide",
+        treeDataProvider: secondaryLocationTreeDataProvider
+    }) as coc.TreeView<LocationTreeItem>;
+    context.subscriptions.push(issueLocationsView);
+
+    IssueService.init(languageClient, secondaryLocationTreeDataProvider, issueLocationsView);
+
+    const automaticAnalysisService = new AutomaticAnalysisService(findingsView);
+    automaticAnalysisService.updateAutomaticAnalysisStatusBarAndFindingsViewMessage();
 
     coc.workspace.onDidChangeConfiguration(async (event) => {
         if (event.affectsConfiguration("sonarlint.rules")) {
-            allRulesTreeDataProvider.refresh()
+            allRulesTreeDataProvider.refresh();
+            setRulesViewMessage(allRulesView);
         }
-    })
+        if (event.affectsConfiguration("sonarlint.connectedMode")) {
+            allConnectionsTreeDataProvider.refresh();
+        }
+        if (event.affectsConfiguration("sonarlint.focusOnNewCode")) {
+            findingsTreeDataProvider.refresh();
+        }
+        if (event.affectsConfiguration("sonarlint.automaticAnalysis")) {
+            automaticAnalysisService.updateAutomaticAnalysisStatusBarAndFindingsViewMessage();
+        }
+        if (event.affectsConfiguration("sonarlint")) {
+            // only send notification to let language server pull the latest settings when the change is relevant
+            languageClient.sendNotification("workspace/didChangeConfiguration", { settings: null });
+        }
+    });
 
-    registerCommands(context)
+    coc.workspace.onDidChangeWorkspaceFolders(async (event) => {
+        for (const removed of event.removed) {
+            FileSystemServiceImpl.instance.didRemoveWorkspaceFolder(removed);
+        }
 
+        for (const added of event.added) {
+            FileSystemServiceImpl.instance.didAddWorkspaceFolder(added);
+        }
+    });
+
+    registerCommands(context);
+
+    allConnectionsTreeDataProvider = new AllConnectionsTreeDataProvider(languageClient);
+
+    allConnectionsView = coc.window.createTreeView("SonarLint.ConnectedMode", {
+        bufhidden: "hide",
+        treeDataProvider: allConnectionsTreeDataProvider
+    });
+    context.subscriptions.push(allConnectionsView);
+
+    // Update badge when tree data changes
     context.subscriptions.push(
-        coc.extensions.onDidActiveExtension(() => {
-            installClasspathListener(languageClient)
-        }),
-    )
+        findingsTreeDataProvider.onDidChangeTreeData(() => {
+            updateFindingsViewContainerBadge();
+        })
+    );
 
-    installClasspathListener(languageClient)
+    helpAndFeedbackTreeDataProvider = new HelpAndFeedbackTreeDataProvider();
+    helpAndFeedbackView = coc.window.createTreeView("SonarLint.HelpAndFeedback", {
+        bufhidden: "hide",
+        treeDataProvider: helpAndFeedbackTreeDataProvider
+    });
+    context.subscriptions.push(helpAndFeedbackView);
+
+    aiAgentsConfigurationTreeDataProvider = new AIAgentsConfigurationTreeDataProvider();
+    aiAgentsConfigurationView = coc.window.createTreeView("SonarLint.AIAgentsConfiguration", {
+        bufhidden: "hide",
+        treeDataProvider: aiAgentsConfigurationTreeDataProvider
+    });
+    context.subscriptions.push(aiAgentsConfigurationView);
+
+    context.subscriptions.push(onConfigurationChange());
+}
+
+function suggestBinding(params: ExtendedClient.SuggestBindingParams) {
+    logToSonarLintOutput(`Received binding suggestions: ${JSON.stringify(params)}`);
+    AutoBindingService.instance.checkConditionsAndAttemptAutobinding(params);
 }
 
 function registerCommands(context: coc.ExtensionContext) {
     context.subscriptions.push(
-        coc.commands.registerCommand(Commands.SHOW_ALL_LOCATIONS, showAllLocations),
-    )
-    context.subscriptions.push(
-        coc.commands.registerCommand(Commands.CLEAR_LOCATIONS, clearLocations),
-    )
+        coc.commands.registerCommand(Commands.ENABLE_LOGS_AND_SHOW_OUTPUT, () => {
+            enableVerboseLogs();
+            showLogOutput();
+        }),
+        coc.commands.registerCommand(Commands.SHOW_SONARLINT_OUTPUT, () => showLogOutput()),
+        coc.commands.registerCommand(Commands.DUMP_BACKEND_THREADS, () => languageClient.dumpThreads()),
+        coc.commands.registerCommand(Commands.INSTALL_MANAGED_JRE, installManagedJre),
+        coc.commands.registerCommand(Commands.CONFIGURE_COMPILATION_DATABASE, configureCompilationDatabase),
+        coc.commands.registerCommand(Commands.ENABLE_VERBOSE_LOGS, () => enableVerboseLogs()),
+        coc.commands.registerCommand(Commands.SHOW_HELP_PANEL, () => util.showTargetView(helpAndFeedbackView, "Help")),
+        coc.commands.registerCommand(Commands.HELP_AND_FEEDBACK_LINK, async (item: HelpAndFeedbackItem) => {
+            await coc.commands.executeCommand("vscode.open", coc.Uri.parse(item.url as string));
+        }),
+        coc.commands.registerCommand(Commands.ANALYSE_OPEN_FILE, () => {
+            IssueService.instance.analyseOpenFileIgnoringExcludes(true);
+            coc.commands.executeCommand(Commands.SHOW_ALL_FINDINGS);
+        }),
+        coc.commands.registerCommand("SonarLint.OpenSample", async () => {
+            const sampleFileUri = coc.Uri.file(Path.join(context.extensionPath, "walkthrough", "sample.py"));
+            const sampleDocument = await coc.workspace.openTextDocument(sampleFileUri);
+            await util.focusResourceLocation(sampleDocument.uri);
+        })
+    );
 
     context.subscriptions.push(
-        coc.commands.registerCommand(Commands.DEACTIVATE_RULE, toggleRule("off")),
-    )
-    context.subscriptions.push(
-        coc.commands.registerCommand(Commands.ACTIVATE_RULE, toggleRule("on")),
-    )
-    context.subscriptions.push(
-        coc.commands.registerCommand(Commands.TOGGLE_RULE, toggleRule()),
-    )
+        coc.commands.registerCommand(Commands.AUTO_BIND_WORKSPACE_FOLDERS, () => AutoBindingService.instance.autoBindWorkspace()),
+        coc.commands.registerCommand(Commands.SHARE_CONNECTED_MODE_CONFIG, () =>
+            SharedConnectedModeSettingsService.instance.askConfirmationAndCreateSharedConnectedModeSettingsFile(
+                coc.workspace.getWorkspaceFolder(coc.workspace.root) as coc.WorkspaceFolder
+            )
+        ),
+        coc.commands.registerCommand(
+            Commands.SHOW_ALL_CONNECTIONS,
+            async () => await util.showTargetView(allConnectionsView, "Connections")
+        ),
+        coc.commands.registerCommand(
+            Commands.CONNECT_TO_SONARQUBE,
+            async () => await connectToSonarQube(context, floatDescriptionFactory)(),
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.CONNECT_TO_SONARCLOUD,
+            async () => await connectToSonarCloud(context, floatDescriptionFactory)(),
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.SHOW_ALL_INFO_FOR_CONNECTION,
+            (connectionBinding) => {
+                ConnectionSettingsService.instance.showAllInfoForConnection(connectionBinding);
+            },
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(Commands.SHOW_CONNECTION_INFO, showConnectionDetails(floatDescriptionFactory), undefined, true),
+        coc.commands.registerCommand(
+            Commands.ADD_PROJECT_BINDING,
+            (connectionBinding) => BindingService.instance.createOrEditBinding(connectionBinding.id, connectionBinding.contextValue),
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.EDIT_PROJECT_BINDING,
+            (connectionBinding) =>
+                BindingService.instance.createOrEditBinding(
+                    connectionBinding.connectionId,
+                    connectionBinding.contextValue,
+                    connectionBinding.uri,
+                    connectionBinding.serverType
+                ),
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.REMOVE_PROJECT_BINDING,
+            (connectionBinding) => BindingService.instance.deleteBindingWithConfirmation(connectionBinding),
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.FOCUS_ON_CONNECTION,
+            async (connectionType: ConnectionType, connectionId?: string) => {
+                await util.showTargetView(allConnectionsView, "Connections");
+                const connectionsOfType = await allConnectionsTreeDataProvider.getConnections(connectionType);
+                const targetConnection = connectionsOfType.find((c) => c.id === connectionId) ?? connectionsOfType[0];
+                await allConnectionsView.reveal(targetConnection, { select: true, focus: true, expand: false });
+            },
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.CONFIGURE_MCP_SERVER,
+            (connection) => {
+                configureMCPServer(languageClient, allConnectionsTreeDataProvider, connection);
+                aiAgentsConfigurationTreeDataProvider.refresh();
+            },
+            undefined,
+            true
+        )
+    );
 
     context.subscriptions.push(
         coc.commands.registerCommand(Commands.SHOW_ALL_RULES, async () => {
-            allRulesTreeDataProvider.filter()
-            await showRulesView("Sonarlint all rules")
+            allRulesTreeDataProvider.filter();
+            await util.showTargetView(allRulesView, "Rules");
         }),
-    )
-    context.subscriptions.push(
         coc.commands.registerCommand(Commands.SHOW_ACTIVE_RULES, async () => {
-            allRulesTreeDataProvider.filter("on")
-            await showRulesView("Sonarlint active rules")
+            allRulesTreeDataProvider.filter("on");
+            await util.showTargetView(allRulesView, "Active Rules");
         }),
-    )
-    context.subscriptions.push(
         coc.commands.registerCommand(Commands.SHOW_INACTIVE_RULES, async () => {
-            allRulesTreeDataProvider.filter("off")
-            await showRulesView("Sonarlint inactive rules")
+            allRulesTreeDataProvider.filter("off");
+            await util.showTargetView(allRulesView, "Inactive Rules");
         }),
-    )
+        coc.commands.registerCommand(Commands.OPEN_RULE_BY_KEY, async (ruleKey) => {
+            ruleKey = ruleKey || (await coc.window.requestInput("Enter Language or Rule", "", {}));
+            if (!ruleKey || ruleKey.length == 0) {
+                coc.window.showWarningMessage(`Provided empty or invalid key or rule`);
+                return;
+            }
+            allRulesTreeDataProvider.filter();
+            ruleKey = ruleKey.toLowerCase();
+            await util.showTargetView(allRulesView, `All Rules`);
+            const indexOfSeparator = ruleKey.indexOf(":");
+            const sourceLanguageName = indexOfSeparator > 0 ? ruleKey.substring(0, indexOfSeparator) : ruleKey;
+            const languageName = userNormalizedLanguageKey(sourceLanguageName.toLowerCase());
+            const allRules: ExtendedServer.RulesResponse = await allRulesTreeDataProvider.getAllRules();
 
-    context.subscriptions.push(
-        coc.commands.registerCommand(
-            Commands.OPEN_RULE_BY_KEY,
-            async (ruleKey: string) => {
-                if (!ruleKey || ruleKey.length == 0) {
-                    coc.window.showWarningMessage(`Provided rule key was emtpy or was invalid`)
-                    return
-                }
-                allRulesTreeDataProvider.filter()
-                await showRulesView(`Sonarlint rules for rule ${ruleKey}`)
-                const indexOfSeparator = ruleKey.indexOf(":")
-                const language = indexOfSeparator > 0 ? ruleKey.substring(0, indexOfSeparator) : null
-                const type = indexOfSeparator > 0 && language
-                    ? new RuleNode({key: languageKeyDeNormalization(language) + ":" + ruleKey.substring(indexOfSeparator + 1).toLowerCase()} as protocol.Rule, language)
-                    : new LanguageNode(ruleKey, coc.TreeItemCollapsibleState.Collapsed)
-                let node = await allRulesTreeDataProvider.getTreeItem(type)
-                if (type instanceof RuleNode && language) {
-                    const pnode = new LanguageNode(language.toLowerCase(), coc.TreeItemCollapsibleState.Expanded)
-                    allRulesTreeDataProvider.register(pnode)
-                    if (node === type) {
-                        await allRulesTreeDataProvider.getChildren(pnode)
-                        node = await allRulesTreeDataProvider.getTreeItem(type)
+            const matchingRules: Array<ExtendedServer.Rule> = allRules[languageName];
+            if (matchingRules && matchingRules.length > 0) {
+                const parentNode = allRulesTreeDataProvider.getTreeElement(languageName);
+                parentNode.collapsibleState = coc.TreeItemCollapsibleState.Expanded;
+                await allRulesView.reveal(parentNode, { select: true, focus: true, expand: true });
+
+                let ruleId =
+                    indexOfSeparator >= 0 && ruleKey.length > indexOfSeparator + 1 ? ruleKey.substring(indexOfSeparator + 1) : undefined;
+                if (ruleId && ruleId !== undefined) {
+                    ruleId = `${languageName}:${ruleId}`.toLowerCase();
+                    const foundRule: ExtendedServer.Rule | undefined = matchingRules.find((rule) => {
+                        return rule.key.toLowerCase().startsWith(ruleId as string);
+                    });
+                    if (foundRule && foundRule !== undefined) {
+                        let ruleNode = allRulesTreeDataProvider.getTreeElement(foundRule.key.toLowerCase());
+                        !ruleNode || (await allRulesTreeDataProvider.getChildren(parentNode));
+                        ruleNode = allRulesTreeDataProvider.getTreeElement(foundRule.key.toLowerCase());
+                        await allRulesView.reveal(ruleNode, { select: true, focus: true, expand: false });
+                    } else {
+                        coc.window.showWarningMessage(`Unable to find or resolve rule ${ruleId}`);
                     }
-                    await allRulesView?.reveal(node, {select: true, focus: true, expand: true})
-                } else if (type instanceof LanguageNode) {
-                    node.collapsibleState = coc.TreeItemCollapsibleState.Expanded
-                    allRulesTreeDataProvider.register(node)
-                    await allRulesView?.reveal(node, {select: true, focus: true, expand: true})
-                } else {
-                    coc.window.showWarningMessage(`Unable to find or resolve rule id ${ruleKey}`)
                 }
+                return true;
+            } else {
+                coc.window.showWarningMessage(`Unable to find or resolve langauge ${languageName}`);
+            }
+        }),
+        coc.commands.registerCommand(
+            Commands.DEACTIVATE_RULE,
+            async (ruleKey: string | ExtendedServer.Rule) => {
+                await toggleRule("off")(ruleKey);
             },
+            undefined,
+            true
         ),
-    )
+        coc.commands.registerCommand(
+            Commands.ACTIVATE_RULE,
+            async (ruleKey: string | ExtendedServer.Rule) => {
+                await toggleRule("on")(ruleKey);
+            },
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.TOGGLE_RULE,
+            async (ruleKey: string | ExtendedServer.Rule) => {
+                await toggleRule()(ruleKey);
+            },
+            undefined,
+            true
+        )
+    );
 
     context.subscriptions.push(
+        coc.commands.registerCommand(Commands.SHOW_ALL_FINDINGS, async () => {
+            FindingsTreeDataProvider.instance.setFilter(FilterType.All);
+            await util.showTargetView(findingsView, "Findings");
+        }),
+        coc.commands.registerCommand(Commands.SHOW_FIXABLE_ISSUES_ONLY, async () => {
+            FindingsTreeDataProvider.instance.setFilter(FilterType.Fix_Available);
+            await util.showTargetView(findingsView, "Fixable Findings");
+        }),
+        coc.commands.registerCommand(Commands.SHOW_OPEN_FILES_ONLY, async () => {
+            FindingsTreeDataProvider.instance.setFilter(FilterType.Open_Files_Only);
+            await util.showTargetView(findingsView, "Opened files Findings");
+        }),
+        coc.commands.registerCommand(Commands.SHOW_CURRENT_FILE_ONLY, async () => {
+            FindingsTreeDataProvider.instance.setFilter(FilterType.Current_File_Only);
+            await util.showTargetView(findingsView, "Current files Findings");
+        }),
+        coc.commands.registerCommand(Commands.SHOW_HIGH_SEVERITY_ONLY, async () => {
+            FindingsTreeDataProvider.instance.setFilter(FilterType.High_Severity_Only);
+            await util.showTargetView(findingsView, "High severity Findings");
+        }),
+        coc.commands.registerCommand(Commands.SCAN_FOR_HOTSPOTS_IN_FOLDER, async (folder) => {
+            await scanFolderForHotspotsCommandHandler(folder);
+        }),
+        coc.commands.registerCommand(Commands.SHOW_HOTSPOT_DESCRIPTION, showHotspotDescription(floatDescriptionFactory), undefined, true),
+        coc.commands.registerCommand(
+            Commands.SHOW_HOTSPOT_DETAILS,
+            async (hotspot: FindingNode) => {
+                const hotspotDetails = await languageClient.getHotspotDetails(hotspot.key, hotspot.fileUri);
+                await showHotspotDetails(hotspotDetails, hotspot, floatDescriptionFactory);
+            },
+            undefined,
+            true
+        ),
         coc.commands.registerCommand(
             Commands.SHOW_HOTSPOT_RULE_DESCRIPTION,
-            (hotspot) =>
-                languageClient.showHotspotRuleDescription(
-                    hotspot.ruleKey,
-                    hotspot.key,
-                    hotspot.fileUri,
-                ),
+            (hotspot: FindingNode) => languageClient.showHotspotRuleDescription(hotspot.key, hotspot.fileUri),
+            undefined,
+            true
         ),
-    )
+        coc.commands.registerCommand(
+            Commands.OPEN_HOTSPOT_ON_SERVER,
+            (hotspot: FindingNode) => languageClient.openHotspotOnServer(hotspot.key, hotspot.fileUri),
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.CHANGE_HOTSPOT_STATUS,
+            (hotspot: FindingNode) => changeHotspotStatus(hotspot.serverIssueKey as string, hotspot.fileUri, languageClient),
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(Commands.CLEAR_HOTSPOT_HIGHLIGHTING, clearLocations, undefined, true),
+        coc.commands.registerCommand(Commands.FORGET_FOLDER_HOTSPOTS, () => languageClient.forgetFolderHotspots(), undefined, true),
+        coc.commands.registerCommand(
+            Commands.REOPEN_LOCAL_ISSUES,
+            () => {
+                IssueService.instance.reopenLocalIssues();
+            },
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(Commands.SHOW_ALL_LOCATIONS, showAllLocations, undefined, true),
+        coc.commands.registerCommand(Commands.NAVIGATE_TO_LOCATION, navigateToLocation, undefined, true),
+        coc.commands.registerCommand(Commands.CLEAR_LOCATIONS, clearLocations, undefined, true),
+        coc.commands.registerCommand(
+            Commands.RESOLVE_ISSUE,
+            (workspaceUri: string, issueKey: string, fileUri: string, isTaintIssue: boolean, isDependencyRisk = false) =>
+                resolveIssueMultiStepInput(workspaceUri, issueKey, fileUri, isTaintIssue, isDependencyRisk),
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.SHOW_HOTSPOT_LOCATION,
+            (hotspot: FindingNode) => languageClient.showHotspotLocations(hotspot.key, hotspot.fileUri),
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.CHANGE_DEPENDENCY_RISK_STATUS,
+            async (finding: FindingNode) => {
+                FindingsTreeDataProvider.instance.changeDependencyRiskStatus(finding);
+            },
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.SHOW_ALL_INFO_FOR_FINDING,
+            (finding: FindingNode) => {
+                FindingsTreeDataProvider.instance.showAllInfoForFinding(finding);
+            },
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.TRIGGER_BROWSE_TAINT_COMMAND,
+            (finding: FindingNode) => {
+                // call server-side command to open the taint vulnerability on the remote server
+                coc.commands.executeCommand("SonarLint.BrowseTaintVulnerability", finding.serverIssueKey || finding.key, finding.fileUri);
+            },
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.TRIGGER_AI_CODE_FIX_COMMAND,
+            (finding: FindingNode) => {
+                // call server-side command to to suggest fix
+                coc.commands.executeCommand("SonarLint.SuggestFix", finding.key, finding.fileUri);
+            },
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.NAVIGATE_FINDING_LOCATION,
+            async (finding: FindingNode) => {
+                if (finding.findingType === FindingType.SecurityHotspot) {
+                    await coc.commands.executeCommand(Commands.SHOW_HOTSPOT_LOCATION, finding);
+                } else if (finding.findingType === FindingType.TaintVulnerability) {
+                    await coc.commands.executeCommand(
+                        "SonarLint.ShowTaintVulnerabilityFlows",
+                        finding.serverIssueKey,
+                        getConnectionIdForFile(finding.fileUri)
+                    );
+                    util.hideTargetView(findingsView);
+                } else if (finding.findingType === FindingType.Issue) {
+                    if (!(finding instanceof NotebookFindingNode)) {
+                        // showing all locations for notebook cells is not supported
+                        await coc.commands.executeCommand("SonarLint.ShowIssueFlows", finding.key, finding.fileUri);
+                    }
+                    util.hideTargetView(findingsView);
+                } else if (finding.findingType === FindingType.DependencyRisk) {
+                    languageClient.dependencyRiskInvestigatedLocally();
+                    languageClient.openDependencyRiskInBrowser(finding.fileUri, finding.key);
+                }
+            },
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            Commands.TRIGGER_RESOLVE_TAINT_COMMAND,
+            (finding: FindingNode) => {
+                const fileUri = finding.fileUri;
+                const workspaceUri = coc.workspace.getWorkspaceFolder(coc.Uri.parse(fileUri))?.uri;
+                const issueKey = finding.serverIssueKey;
+                const isTaintIssue = true;
 
-    context.subscriptions.push(
-        coc.commands.registerCommand(Commands.FIND_RULE_BY_KEY, async () => {
-            const key = await coc.window.requestInput("Enter rule key", "")
-            await coc.commands.executeCommand(Commands.OPEN_RULE_BY_KEY, key)
-        }),
-    )
-    context.subscriptions.push(
-        coc.commands.registerCommand(Commands.SHOW_SONARLINT_OUTPUT, () =>
-            showLogOutput(),
+                coc.commands.executeCommand(Commands.RESOLVE_ISSUE, workspaceUri, issueKey, fileUri, isTaintIssue);
+            },
+            undefined,
+            true
         ),
-    )
+        coc.commands.registerCommand(
+            Commands.TRIGGER_FETCH_CODE_ACTIONS_COMMAND,
+            async (finding: FindingNode) => {
+                const codeActions = await coc.commands.executeCommand<coc.CodeAction[]>(
+                    // TODO: what is this for
+                    "vscode.executeCodeActionProvider",
+                    coc.Uri.parse(finding.fileUri),
+                    finding.range,
+                    coc.CodeActionKind.QuickFix
+                );
+                const codeActionsFromSonarQube = codeActions.filter((action) => action.title.startsWith("SonarQube: "));
+                await selectAndApplyCodeAction(codeActionsFromSonarQube);
+            },
+            undefined,
+            true
+        )
+    );
 
     context.subscriptions.push(
         coc.commands.registerCommand(
-            Commands.CONFIGURE_COMPILATION_DATABASE,
-            () => void configureCompilationDatabase(),
+            "SonarLint.NewCodeDefinition.Enable",
+            () => {
+                coc.workspace.getConfiguration("sonarlint").update("focusOnNewCode", true, coc.ConfigurationTarget.Global);
+            },
+            undefined,
+            true
         ),
-    )
+        coc.commands.registerCommand(
+            "SonarLint.NewCodeDefinition.Disable",
+            () => {
+                coc.workspace.getConfiguration("sonarlint").update("focusOnNewCode", false, coc.ConfigurationTarget.Global);
+            },
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            "SonarLint.AutomaticAnalysis.Enable",
+            () => {
+                coc.workspace.getConfiguration("sonarlint").update("automaticAnalysis", true, coc.ConfigurationTarget.Global);
+            },
+            undefined,
+            true
+        ),
+        coc.commands.registerCommand(
+            "SonarLint.AutomaticAnalysis.Disable",
+            () => {
+                coc.workspace.getConfiguration("sonarlint").update("automaticAnalysis", false, coc.ConfigurationTarget.Global);
+            },
+            undefined,
+            true
+        )
+    );
 
     context.subscriptions.push(
-        coc.commands.registerCommand(Commands.ENABLE_VERBOSE_LOGS, () => updateVerboseLogging(true))
-    )
-
-    context.subscriptions.push(
-        coc.commands.registerCommand(Commands.INSTALL_MANAGED_JRE, () => {
-            installManagedJre(context, function () {
-                coc.window
-                    .showInformationMessage(`Downloaded & installed a managed jre`)
-            }, function () {
-                coc.window
-                    .showErrorMessage(`Unable to download managed jre`)
-            })
-        })
-    )
-
+        coc.commands.registerCommand(Commands.OPEN_SONARQUBE_RULES_FILE, () => openSonarQubeRulesFile()),
+        coc.commands.registerCommand(Commands.OPEN_MCP_SERVER_CONFIGURATION, () => openMCPServerConfigurationFile()),
+        coc.commands.registerCommand(
+            Commands.SHOW_MCP_CONFIGURATIONS,
+            async () => await util.showTargetView(aiAgentsConfigurationView, "MCP Configurations")
+        ),
+        coc.commands.registerCommand(Commands.INTRODUCE_SONARQUBE_RULES_FILE, () => introduceSonarQubeRulesFile(languageClient)),
+        coc.commands.registerCommand(
+            Commands.REFRESH_AI_AGENTS_CONFIGURATION,
+            () => aiAgentsConfigurationTreeDataProvider.refresh(),
+            undefined,
+            true
+        )
+    );
 }
 
-function installCustomRequestHandlers() {
-    languageClient.onNotification(
-        protocol.ShowRuleDescriptionNotification.type,
-        showRuleDescription(floatDescriptionFactory),
-    )
-    languageClient.onRequest(protocol.ListFilesInFolderRequest.type, (params: protocol.FolderUriParams) => {
-        const files: any[] = []
-        const ignored: string[] = coc.workspace
-            .getConfiguration()
-            .get<string[]>("sonarlint.listFilesFoldersExclusions", [])
+async function scanFolderForHotspotsCommandHandler(folderUri: coc.Uri) {
+    await useProvidedFolderOrPickManuallyAndScan(
+        folderUri,
+        coc.workspace.workspaceFolders,
+        languageClient,
+        getFilesForHotspotsAndLaunchScan
+    );
+}
 
-        const folderCrawler = (dir: string) => {
-            let elements: string[] = []
-            try {
-                elements = FS.readdirSync(dir)
-            } catch (error) {
-                logToSonarLintOutput(`Failed to read dir ${dir} due to ${error}`)
-            }
-            for (const elem of elements) {
-                try {
-                    const full = path.join(dir, elem)
-                    const stat = FS.statSync(full)
-                    if (stat.isFile()) {
-                        files.push({
-                            filePath: full,
-                            fileName: elem
-                        })
-                    } else if (!ignored.includes(elem)) {
-                        folderCrawler(full)
+function installCustomRequestHandlers(context: coc.ExtensionContext) {
+    context.subscriptions.push(
+        languageClient.onNotification(ExtendedClient.ShowIssueNotification.type, async (issue: ExtendedClient.Issue) => {
+            await IssueService.showIssue(issue);
+        })
+    );
+    context.subscriptions.push(
+        languageClient.onNotification(
+            ExtendedClient.StartProgressNotification.type,
+            (params: ExtendedClient.StartProgressNotificationParams) => {
+                const taskId = params.taskId;
+                if (currentProgress[taskId]) {
+                    // If there's an existing progress, resolve it first
+                    currentProgress[taskId].resolve();
+                }
+
+                coc.window.withProgress(
+                    {
+                        title: "Sonarlint",
+                        cancellable: false
+                    },
+                    (progress) => {
+                        return new Promise<void>((resolve) => {
+                            currentProgress[taskId] = { progress, resolve };
+                            if (params.message) {
+                                progress.report({ message: params.message });
+                            }
+                        });
                     }
-                } catch (error) {
-                    logToSonarLintOutput(`Failed to stat ${elem} due to ${error}`)
+                );
+            }
+        )
+    );
+    context.subscriptions.push(
+        languageClient.onNotification(
+            ExtendedClient.EndProgressNotification.type,
+            (params: ExtendedClient.EndProgressNotificationParams) => {
+                const taskId = params.taskId;
+                if (currentProgress[taskId]) {
+                    currentProgress[taskId].resolve();
+                    currentProgress[taskId] = undefined;
                 }
             }
-        }
-        folderCrawler(coc.Uri.parse(params.folderUri).fsPath)
-        return {foundFiles: files}
-    })
-    languageClient.onRequest(protocol.GetJavaConfigRequest.type, (params) =>
-        getJavaConfig(languageClient, params),
-    )
-    languageClient.onRequest(protocol.ScmCheckRequest.type, (params) =>
-        util.shouldIgnoreBySourceControl(params),
-    )
-    languageClient.onRequest(protocol.FilterOutExcludedFiles.type, (params) =>
-        util.filterOutFilesIgnoredForAnalysis(params.fileUris),
-    )
-    languageClient.onRequest(protocol.ShouldAnalyseFileCheck.type, (params) =>
-        util.shouldAnalyseFile(params.uri),
-    )
-    languageClient.onRequest(protocol.IsOpenInEditor.type, (fileUri) =>
-        util.isOpenInEditor(fileUri),
-    )
-    languageClient.onRequest(protocol.SslCertificateConfirmation.type, cert =>
-        showSslCertificateConfirmationDialog(cert)
+        )
     );
-    languageClient.onRequest(protocol.GetTokenForServer.type, serverId =>
-        connectionSettingsService.getServerToken(serverId),
+    languageClient.onNotification(ExtendedClient.ShowFixSuggestion.type, (params: ExtendedClient.ShowFixSuggestionParams) =>
+        FixSuggestionService.instance.showFixSuggestion(params)
     );
-    languageClient.onNotification(protocol.ReportConnectionCheckResult.type, result => {
-        connectionSettingsService.reportConnectionCheckResult(result);
-        if (result.success) {
-            coc.window.showInformationMessage(`Connection for sonar qube/cloud with id '${result.connectionId}' was successful!`);
+    languageClient.onNotification(ExtendedClient.ShowRuleDescriptionNotification.type, showRuleDescription(floatDescriptionFactory));
+    languageClient.onNotification(ExtendedClient.SuggestBindingNotification.type, (params: ExtendedClient.SuggestBindingParams) =>
+        suggestBinding(params)
+    );
+    languageClient.onRequest(ExtendedClient.ListFilesInFolderRequest.type, async (params: any) => {
+        await FileSystemServiceImpl.instance.crawlDirectory(coc.Uri.parse(params.folderUri));
+        return AutoBindingService.instance.listAutobindingFilesInFolder(params);
+    });
+    languageClient.onRequest(ExtendedClient.GetTokenForServer.type, (serverId: string) => getTokenForServer(serverId));
+
+    languageClient.onRequest(
+        ExtendedClient.GetJavaConfigRequest.type,
+        async (fileUri: string) => await getJavaConfig(languageClient, fileUri)
+    );
+    languageClient.onRequest(ExtendedClient.ShouldAnalyseFileCheck.type, (params: any) => shouldAnalyseFile(params.uri));
+    languageClient.onRequest(ExtendedClient.FilterOutExcludedFiles.type, (params: any) =>
+        filterOutFilesIgnoredForAnalysis(params.fileUris)
+    );
+    languageClient.onRequest(ExtendedClient.CanShowMissingRequirementNotification.type, () => {
+        return context.globalState.get(CAN_SHOW_MISSING_REQUIREMENT_NOTIF, true);
+    });
+    languageClient.onNotification(ExtendedClient.DoNotShowMissingRequirementsMessageAgain.type, () => {
+        context.globalState.update(CAN_SHOW_MISSING_REQUIREMENT_NOTIF, false);
+    });
+    languageClient.onNotification(ExtendedClient.MaybeShowWiderLanguageSupportNotification.type, (languages: string[]) =>
+        maybeShowWiderLanguageSupportNotification(context, languages)
+    );
+    languageClient.onNotification(ExtendedClient.RemoveBindingsForDeletedConnections.type, async (connectionIds: string[]) => {
+        await BindingService.instance.removeBindingsForRemovedConnections(connectionIds);
+    });
+    languageClient.onNotification(ExtendedClient.ReportConnectionCheckResult.type, (checkResult: ConnectionCheckResult) => {
+        ConnectionSettingsService.instance.reportConnectionCheckResult(checkResult);
+        allConnectionsTreeDataProvider.reportConnectionCheckResult(checkResult);
+        if (checkResult.success) {
+            coc.window.showInformationMessage(`Connection for sonar qube/cloud with id '${checkResult.connectionId}' was successful!`);
         } else {
-            coc.window.showErrorMessage(`Connection with id '${result.connectionId}' failed, due to ${result.reason}. Please check your settings.`);
+            coc.window.showErrorMessage(
+                `Connection with id '${checkResult.connectionId}' failed, due to ${checkResult.reason}. Please check your settings.`
+            );
         }
     });
-    languageClient.onRequest(
-        protocol.CanShowMissingRequirementNotification.type, () => {return true})
+    languageClient.onNotification(ExtendedClient.ShowNotificationForFirstSecretsIssueNotification.type, () =>
+        showNotificationForFirstSecretsIssue(context)
+    );
+    languageClient.onNotification(ExtendedClient.ShowSonarLintOutputNotification.type, () =>
+        coc.commands.executeCommand(Commands.SHOW_SONARLINT_OUTPUT)
+    );
+    languageClient.onNotification(ExtendedClient.OpenJavaHomeSettingsNotification.type, () =>
+        coc.commands.executeCommand(Commands.OPEN_SETTINGS, JAVA_HOME_CONFIG)
+    );
+    languageClient.onNotification(ExtendedClient.OpenPathToNodeSettingsNotification.type, () =>
+        coc.commands.executeCommand(Commands.OPEN_SETTINGS, "sonarlint.pathToNodeExecutable")
+    );
+    languageClient.onNotification(ExtendedClient.BrowseToNotification.type, (browseTo: string) =>
+        coc.commands.executeCommand(Commands.OPEN_BROWSER, browseTo)
+    );
+    languageClient.onNotification(ExtendedClient.OpenConnectionSettingsNotification.type, (isSonarCloud: boolean) => {
+        const targetSection = `sonarlint.connectedMode.connections.${isSonarCloud ? "sonarcloud" : "sonarqube"}`;
+        return coc.commands.executeCommand(Commands.OPEN_SETTINGS, targetSection);
+    });
+    languageClient.onNotification(ExtendedClient.ShowHotspotNotification.type, (h: ExtendedClient.RemoteHotspot) =>
+        showSecurityHotspot(findingsView, findingsTreeDataProvider, h)
+    );
+    languageClient.onNotification(ExtendedClient.ShowIssueOrHotspotNotification.type, showAllLocations);
+    languageClient.onNotification(ExtendedClient.NeedCompilationDatabaseRequest.type, notifyMissingCompileCommands(context));
+    languageClient.onRequest(ExtendedClient.GetTokenForServer.type, (serverId: string) => getTokenForServer(serverId));
     languageClient.onNotification(
-        protocol.ShowSonarLintOutputNotification.type,
-        () => void coc.commands.executeCommand(Commands.SHOW_SONARLINT_OUTPUT),
-    )
-    languageClient.onNotification(
-        protocol.OpenJavaHomeSettingsNotification.type,
-        () => void coc.commands.executeCommand(Commands.OPEN_SETTINGS, JAVA_HOME_CONFIG),
-    )
-    languageClient.onNotification(
-        protocol.OpenPathToNodeSettingsNotification.type,
-        () => void coc.commands.executeCommand(
-            Commands.OPEN_SETTINGS,
-            "sonarlint.pathToNodeExecutable",
-        ),
-    )
-    languageClient.onNotification(
-        protocol.BrowseToNotification.type,
-        (browseTo) => void coc.commands.executeCommand(
-            Commands.OPEN_BROWSER,
-            coc.Uri.parse(browseTo),
-        ),
-    )
-
-    if (isNotificationEnabled() !== false) {
-        languageClient.onNotification(
-            protocol.NeedCompilationDatabaseRequest.type,
-            notifyMissingCompileCommands(),
-        )
-    }
-}
-
-async function showAllLocations(issue: protocol.Issue) {
-    const locations: Location[] = []
-    issue.flows.forEach((flow) =>
-        flow.locations.forEach((loc) => {
-            const textRange = loc.textRange
-            const range = {
-                start: {
-                    line: textRange.startLine,
-                    character: textRange.startLineOffset,
-                } as Position,
-                end: {
-                    line: textRange.endLine,
-                    character: textRange.endLineOffset,
-                } as Position,
-            }
-            locations.push({uri: loc.uri, range: range} as Location)
-        }),
-    )
-
-    const quickFixList = await coc.workspace.getQuickfixList(locations)
-    await coc.nvim.call("setqflist", [quickFixList])
-
-    let openCommand = (await coc.nvim.getVar(
-        "coc_quickfix_open_command",
-    )) as string
-    coc.nvim.command(
-        typeof openCommand === "string" ? openCommand : "copen",
-        true,
-    )
-}
-
-async function clearLocations() {
-    await coc.nvim.call("setqflist", [[], "r"])
-}
-
-export function deactivate(): Thenable<void> | undefined {
-    if (!languageClient) {
-        return undefined
-    }
-    return languageClient.stop()
-}
-
-export async function showRulesView(title: string) {
-    allRulesView.title = title
-    if (allRulesView?.visible) {
-        const winId = allRulesView.windowId
-        const tabnr = await nvim.call('tabpagenr') as number
-        const buflist = await nvim.call('tabpagebuflist', [tabnr]) as number[]
-        const bufId = await nvim.call('winbufnr', [winId])
-        const found = buflist.find((bufnr) => {return bufId == bufnr})
-        if (!found) {
-            await nvim.call('coc#window#close', [winId])
-            await allRulesView?.show('botright 10split')
+        ExtendedClient.PublishHotspotsForFile.type,
+        async (hotspotsPerFile: ExtendedClient.PublishDiagnosticsParams) => {
+            findingsTreeDataProvider.updateHotspots(hotspotsPerFile);
         }
-    } else if (!allRulesView?.visible) {
-        await allRulesView?.show('botright 10split')
+    );
+    languageClient.onNotification(ExtendedClient.PublishTaintVulnerabilitiesForFile.type, async (taintVulnerabilitiesPerFile: any) => {
+        findingsTreeDataProvider.updateTaintVulnerabilities(taintVulnerabilitiesPerFile.uri, taintVulnerabilitiesPerFile.diagnostics);
+    });
+    languageClient.onNotification(ExtendedClient.NotifyInvalidToken.type, async (params: any) => {
+        const isSonarQube =
+            ConnectionSettingsService.instance.getSonarQubeConnections()?.findIndex((c) => c.connectionId === params.connectionId) !== -1;
+        const isSonarCloud =
+            ConnectionSettingsService.instance.getSonarCloudConnections()?.findIndex((c) => c.connectionId === params.connectionId) !== -1;
+        if (!isSonarCloud && !isSonarQube) {
+            return;
+        }
+        await coc.window.showErrorMessage(`Connection to '${params.connectionId}' failed: Please verify your token.`);
+    });
+
+    languageClient.onNotification(
+        ExtendedClient.PublishDependencyRisksForFolder.type,
+        async (dependencyRisksPerFolder: ExtendedClient.PublishDiagnosticsParams) => {
+            findingsTreeDataProvider.updateDependencyRisks(dependencyRisksPerFolder);
+        }
+    );
+
+    languageClient.onRequest(
+        ExtendedClient.AssistBinding.type,
+        async (params: ExtendedClient.AssistBindingParams) => await BindingService.instance.assistBinding(params)
+    );
+    languageClient.onRequest(ExtendedClient.SslCertificateConfirmation.type, (cert: ExtendedClient.SslCertificateConfirmationParams) =>
+        showSslCertificateConfirmationDialog(cert)
+    );
+    languageClient.onRequest(ExtendedClient.AssistCreatingConnection.type, assistCreatingConnection(context));
+    languageClient.onNotification(
+        ExtendedClient.ShowSoonUnsupportedVersionMessage.type,
+        (params: ExtendedClient.ShowSoonUnsupportedVersionMessageParams) =>
+            showSoonUnsupportedVersionMessage(params, context.workspaceState)
+    );
+    languageClient.onNotification(
+        ExtendedClient.SubmitNewCodeDefinition.type,
+        (newCodeDefinitionForFolderUri: ExtendedClient.SubmitNewCodeDefinitionParams) => {
+            NewCodeDefinitionService.instance.updateNewCodeDefinitionForFolderUri(newCodeDefinitionForFolderUri);
+        }
+    );
+    languageClient.onNotification(ExtendedClient.SuggestConnection.type, (params: any) =>
+        SharedConnectedModeSettingsService.instance.handleSuggestConnectionNotification(params.suggestionsByConfigScopeId)
+    );
+    languageClient.onNotification(ExtendedClient.EmbeddedServerStartedNotification.type, (params: any) => {
+        onEmbeddedServerStarted(params.port);
+    });
+    languageClient.onRequest(ExtendedClient.IsOpenInEditor.type, (fileUri) => util.isOpenInEditor(fileUri));
+}
+
+function updateFindingsViewContainerBadge() {
+    const totalCount = findingsTreeDataProvider.getTotalFindingsCount();
+    const activeFilter = findingsTreeDataProvider.getActiveFilter();
+
+    if (totalCount > 0) {
+        const filterDisplayName = getFilterDisplayName(activeFilter);
+        findingsView.title = `Findings (${filterDisplayName})`;
+    } else {
+        findingsView.title = "Findings";
     }
 }
 
-function logWithPrefix(data: string, prefix: string) {
-    if (isVerboseEnabled()) {
-        const lines: string[] = data.toString().split(/\r\n|\r|\n/)
-        lines.forEach((l: string) => {
-            if (l.length > 0) {
-                logToSonarLintOutput(`${prefix} ${l}`)
-            }
-        })
+async function getTokenForServer(serverId: string): Promise<string | undefined> {
+    // serverId is either a server URL or a organizationKey prefixed with region (EU_ or US_)
+    return ConnectionSettingsService.instance.getServerToken(serverId);
+}
+
+async function showAllLocations(issue: ExtendedClient.Issue) {
+    await secondaryLocationTreeDataProvider.showAllLocations(issue);
+    if (issue.creationDate) {
+        const createdAgo = issue.creationDate ? DateTime.fromISO(issue.creationDate).toLocaleString(DateTime.DATETIME_MED) : null;
+        issueLocationsView.message = createdAgo ? `Analyzed ${createdAgo} on '${issue.connectionId}'` : `Detected by Sonarlint `;
+    } else {
+        issueLocationsView.message = undefined;
+    }
+    if (issue.flows.length > 0) {
+        // make sure the view is visible
+        const elements: coc.ProviderResult<LocationTreeItem[]> | undefined = secondaryLocationTreeDataProvider.getChildren();
+        if (elements && elements !== undefined) {
+            await util.showTargetView(issueLocationsView, "Locations");
+            await issueLocationsView.reveal(elements[0]);
+        }
     }
 }
 
-export function toUrl(filePath: string) {
-    let pathName: string = Path.resolve(filePath).replace(/\\/g, "/")
+function clearLocations() {
+    secondaryLocationTreeDataProvider.hideLocations();
+    issueLocationsView.message = undefined;
+}
 
-    // Windows drive letter must be prefixed with a slash
-    if (!pathName.startsWith("/")) {
-        pathName = "/" + pathName
+export function deactivate(): coc.Thenable<void> {
+    if (!languageClient) {
+        Promise.resolve();
     }
-
-    return encodeURI("file://" + pathName)
+    return languageClient.stop();
 }

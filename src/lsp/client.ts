@@ -1,171 +1,134 @@
 /* --------------------------------------------------------------------------------------------
- * SonarLint for VisualStudio Code
- * Copyright (C) 2017-2024 SonarSource SA
+ * Sonarlint
+ * Copyright (C) 2017-2025 SonarSource SA
  * sonarlint@sonarsource.com
  * Licensed under the LGPLv3 License. See LICENSE.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-'use strict'
-
-import * as coc from "coc.nvim"
-import { ServerMode } from "../java/java"
-import { code2ProtocolConverter } from "../util/uri"
-import * as protocol from "./protocol"
-import { AnalysisFile } from "./protocol"
+"use strict";
+import * as coc from "coc.nvim";
+import { ServerMode } from "../java/java";
+import { code2ProtocolConverter } from "../util/uri";
+import { ExtendedServer, AnalysisFile, ShowRuleDescriptionParams } from "./protocol";
+import { SonarCloudRegion } from "../settings/connectionsettings";
 
 export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
-
-    listAllRules(): Thenable<protocol.RulesResponse> {
-        return this.sendRequest(protocol.ListAllRulesRequest.type)
+    listAllRules(): coc.Thenable<ExtendedServer.RulesResponse> {
+        return this.sendRequest(ExtendedServer.ListAllRulesRequest.type);
     }
 
     didClasspathUpdate(projectRoot: coc.Uri): void {
-        const projectUri = code2ProtocolConverter(projectRoot)
-        this.sendNotification(protocol.DidClasspathUpdateNotification.type, {
-            projectUri,
-        })
+        const projectUri = code2ProtocolConverter(projectRoot);
+        this.sendNotification(ExtendedServer.DidClasspathUpdateNotification.type, { projectUri });
     }
 
     didJavaServerModeChange(serverMode: ServerMode) {
-        this.sendNotification(protocol.DidJavaServerModeChangeNotification.type, {
-            serverMode,
-        })
+        this.sendNotification(ExtendedServer.DidJavaServerModeChangeNotification.type, { serverMode });
     }
 
     didLocalBranchNameChange(folderRoot: coc.Uri, branchName?: string) {
-        const folderUri = code2ProtocolConverter(folderRoot)
-        this.sendNotification(protocol.DidLocalBranchNameChangeNotification.type, {
-            folderUri,
-            branchName,
-        })
+        const folderUri = code2ProtocolConverter(folderRoot);
+        this.sendNotification(ExtendedServer.DidLocalBranchNameChangeNotification.type, { folderUri, branchName });
     }
 
     checkConnection(connectionId: string) {
-        return this.sendRequest(protocol.CheckConnection.type, { connectionId })
+        return this.sendRequest(ExtendedServer.CheckConnection.type, { connectionId });
     }
 
-    checkNewConnection(
-        token: string,
-        serverOrOrganization: string,
-        isSonarQube: boolean,
-    ) {
-        const params = isSonarQube
-            ? { token, serverUrl: serverOrOrganization }
-            : { token, organization: serverOrOrganization }
-        return this.sendRequest(protocol.CheckConnection.type, params)
+    checkNewConnection(token: string, serverOrOrganization: string, isSonarQube: boolean, region?: SonarCloudRegion) {
+        const params = isSonarQube ? { token, serverUrl: serverOrOrganization } : { token, organization: serverOrOrganization, region };
+        return this.sendRequest(ExtendedServer.CheckConnection.type, params);
     }
 
-    getRemoteProjectNames(connectionId: string, projectKeys: Array<string>) {
-        return this.sendRequest(protocol.GetRemoteProjectNames.type, {
-            connectionId,
-            projectKeys,
-        })
+    getRemoteProjectNamesByKeys(connectionId: string, projectKeys: Array<string>) {
+        return this.sendRequest(ExtendedServer.GetRemoteProjectNamesByProjectKeys.type, { connectionId, projectKeys });
     }
 
     onTokenUpdate(connectionId: string, token: string) {
-        return this.sendNotification(protocol.OnTokenUpdate.type, {
-            connectionId,
-            token,
-        })
+        return this.sendNotification(ExtendedServer.OnTokenUpdate.type, { connectionId, token });
     }
 
     getRemoteProjectsForConnection(connectionId: string) {
-        return this.sendRequest(protocol.GetRemoteProjectsForConnection.type, {
-            connectionId,
-        })
+        return this.sendRequest(ExtendedServer.GetRemoteProjectsForConnection.type, { connectionId });
     }
 
-    generateToken(
-        baseServerUrl: string,
-    ): Promise<protocol.GenerateTokenResponse> {
-        return this.sendRequest(protocol.GenerateToken.type, { baseServerUrl })
+    generateToken(baseServerUrl: string): Promise<ExtendedServer.GenerateTokenResponse> {
+        return this.sendRequest(ExtendedServer.GenerateToken.type, { baseServerUrl });
     }
 
     showHotspotLocations(hotspotKey: string, fileUri: string): void {
-        this.sendRequest(protocol.ShowHotspotLocations.type, {
-            hotspotKey,
-            fileUri,
-        })
+        this.sendRequest(ExtendedServer.ShowHotspotLocations.type, { hotspotKey, fileUri });
     }
 
-    showHotspotRuleDescription(
-        ruleKey: string,
-        hotspotId: string,
-        fileUri: string,
-    ) {
-        this.sendNotification(
-            protocol.ShowHotspotRuleDescriptionNotification.type,
-            { ruleKey, hotspotId, fileUri },
-        )
+    showHotspotRuleDescription(hotspotId: string, fileUri: string) {
+        this.sendNotification(ExtendedServer.ShowHotspotRuleDescriptionNotification.type, { hotspotId, fileUri });
     }
 
     openHotspotOnServer(hotspotId: string, fileUri: string) {
-        this.sendNotification(protocol.OpenHotspotOnServer.type, {
-            hotspotId,
-            fileUri,
-        })
+        this.sendNotification(ExtendedServer.OpenHotspotOnServer.type, { hotspotId, fileUri });
+    }
+
+    openDependencyRiskInBrowser(folderUri: string, issueId: string) {
+        this.sendNotification(ExtendedServer.OpenDependencyRiskInBrowser.type, { folderUri, issueId });
+    }
+
+    dependencyRiskInvestigatedLocally() {
+        this.sendNotification(ExtendedServer.DependencyRiskInvestigatedLocally.type);
+    }
+
+    getDependencyRiskTransitions(dependencyRiskId: string): Promise<ExtendedServer.GetDependencyRiskTransitionsResponse> {
+        return this.sendRequest(ExtendedServer.GetDependencyRiskTransitions.type, { dependencyRiskId });
     }
 
     helpAndFeedbackLinkClicked(itemId: string) {
-        this.sendNotification(protocol.HelpAndFeedbackLinkClicked.type, {
-            id: itemId,
-        })
+        this.sendNotification(ExtendedServer.HelpAndFeedbackLinkClicked.type, { id: itemId });
     }
 
-    scanFolderForHotspots(params: protocol.ScanFolderForHotspotsParams) {
-        this.sendNotification(protocol.ScanFolderForHotspots.type, params)
+    lmToolCalled(toolName: string, success: boolean) {
+        this.sendNotification(ExtendedServer.LMToolCalled.type, { toolName, success });
+    }
+
+    scanFolderForHotspots(params: ExtendedServer.ScanFolderForHotspotsParams) {
+        this.sendNotification(ExtendedServer.ScanFolderForHotspots.type, params);
     }
 
     forgetFolderHotspots() {
-        this.sendNotification(protocol.ForgetFolderHotspots.type)
+        this.sendNotification(ExtendedServer.ForgetFolderHotspots.type);
     }
 
-    getFilePatternsForAnalysis(
-        folderUri: string,
-    ): Promise<protocol.GetFilePatternsForAnalysisResponse> {
-        return this.sendRequest(protocol.GetFilePatternsForAnalysis.type, {
-            uri: folderUri,
-        })
+    getFilePatternsForAnalysis(folderUri: string): Promise<ExtendedServer.GetFilePatternsForAnalysisResponse> {
+        return this.sendRequest(ExtendedServer.GetFilePatternsForAnalysis.type, { uri: folderUri });
     }
 
     getAllowedHotspotStatuses(
         hotspotKey: string,
         folderUri: string,
-        fileUri: string,
-    ): Promise<protocol.GetAllowedHotspotStatusesResponse> {
-        return this.sendRequest(protocol.GetAllowedHotspotStatuses.type, {
-            hotspotKey,
-            folderUri,
-            fileUri,
-        })
+        fileUri: string
+    ): Promise<ExtendedServer.GetAllowedHotspotStatusesResponse> {
+        return this.sendRequest(ExtendedServer.GetAllowedHotspotStatuses.type, { hotspotKey, folderUri, fileUri });
     }
 
-    getSuggestedBinding(
-        configScopeId: string,
-        connectionId: string,
-    ): Promise<protocol.GetSuggestedBindingResponse> {
-        return this.sendRequest(protocol.GetSuggestedBinding.type, {
-            configScopeId,
-            connectionId,
-        })
+    getSuggestedBinding(configScopeId: string, connectionId: string): Promise<ExtendedServer.GetSuggestedBindingResponse> {
+        return this.sendRequest(ExtendedServer.GetSuggestedBinding.type, { configScopeId, connectionId });
     }
 
-    getSharedConnectedModeConfigFileContent(
-        configScopeId: string,
-    ): Promise<protocol.GetSharedConnectedModeConfigFileResponse> {
-        return this.sendRequest(
-            protocol.GetSharedConnectedModeConfigFileContents.type,
-            { configScopeId },
-        )
+    getConnectionSuggestions(configurationScopeId: string): Promise<ExtendedServer.GetConnectionSuggestionsResponse> {
+        return this.sendRequest(ExtendedServer.GetSuggestedConnections.type, { configurationScopeId });
     }
 
-    checkIssueStatusChangePermitted(
-        folderUri: string,
-        issueKey: string,
-    ): Promise<protocol.CheckIssueStatusChangePermittedResponse> {
-        return this.sendRequest(protocol.CheckIssueStatusChangePermitted.type, {
-            folderUri,
-            issueKey,
-        })
+    getSharedConnectedModeConfigFileContent(configScopeId: string): Promise<ExtendedServer.GetSharedConnectedModeConfigFileResponse> {
+        return this.sendRequest(ExtendedServer.GetSharedConnectedModeConfigFileContents.type, { configScopeId });
+    }
+
+    getMCPServerConfiguration(connectionId: string, token: string): Promise<ExtendedServer.GetMCPServerConfigurationResponse> {
+        return this.sendRequest(ExtendedServer.GetMCPServerConfiguration.type, { connectionId, token });
+    }
+
+    getMCPRulesFileContent(aiAssistedIde: string): Promise<ExtendedServer.GetMCPRulesFileContentResponse> {
+        return this.sendRequest(ExtendedServer.GetMCPRulesFileContent.type, aiAssistedIde);
+    }
+
+    checkIssueStatusChangePermitted(folderUri: string, issueKey: string): Promise<ExtendedServer.CheckIssueStatusChangePermittedResponse> {
+        return this.sendRequest(ExtendedServer.CheckIssueStatusChangePermitted.type, { folderUri, issueKey });
     }
 
     changeIssueStatus(
@@ -174,83 +137,84 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
         newStatus: string,
         fileUri: string,
         comment: string,
-        isTaintIssue: boolean,
+        isTaintIssue: boolean
     ): Promise<void> {
-        return this.sendNotification(protocol.SetIssueStatus.type, {
+        return this.sendNotification(ExtendedServer.SetIssueStatus.type, {
             configurationScopeId,
             issueId,
             newStatus,
             fileUri,
             comment,
-            isTaintIssue,
-        })
+            isTaintIssue
+        });
     }
 
-    reopenResolvedLocalIssues(
+    changeDependencyRiskStatus(
         configurationScopeId: string,
-        relativePath: string,
-        fileUri: string,
+        dependencyRiskKey: string,
+        transition: string,
+        comment: string
     ): Promise<void> {
-        return this.sendNotification(protocol.ReopenResolvedLocalIssues.type, {
+        return this.sendNotification(ExtendedServer.ChangeDependencyRiskStatus.type, {
+            configurationScopeId,
+            dependencyRiskKey,
+            transition,
+            comment
+        });
+    }
+
+    reopenResolvedLocalIssues(configurationScopeId: string, relativePath: string, fileUri: string): Promise<void> {
+        return this.sendNotification(ExtendedServer.ReopenResolvedLocalIssues.type, {
             configurationScopeId,
             relativePath,
-            fileUri,
-        })
+            fileUri
+        });
     }
 
     analyseOpenFileIgnoringExcludes(
+        triggeredByUser: boolean,
         textDocument?: AnalysisFile,
-        notebookDocument?: coc.TextDocument,
-        notebookCells?: AnalysisFile[],
+        notebookDocument?: coc.Document,
+        notebookCells?: AnalysisFile[]
     ): Promise<void> {
-        return this.sendNotification(
-            protocol.AnalyseOpenFileIgnoringExcludes.type,
-            {
-                textDocument,
-                notebookUri: notebookDocument
-                    ? notebookDocument.uri.toString()
-                    : undefined,
-                notebookVersion: notebookDocument
-                    ? notebookDocument.version
-                    : undefined,
-                notebookCells,
-            },
-        )
+        return this.sendNotification(ExtendedServer.AnalyseOpenFileIgnoringExcludes.type, {
+            triggeredByUser,
+            textDocument,
+            notebookUri: notebookDocument ? notebookDocument.uri.toString() : null,
+            notebookVersion: notebookDocument ? notebookDocument.version : null,
+            notebookCells
+        });
     }
 
-    changeHotspotStatus(
-        hotspotKey: string,
-        newStatus: string,
-        fileUri: string,
-    ): Promise<void> {
-        return this.sendNotification(protocol.SetHotspotStatus.type, {
-            hotspotKey,
-            newStatus,
-            fileUri,
-        })
+    changeHotspotStatus(hotspotKey: string, newStatus: string, fileUri: string): Promise<void> {
+        return this.sendNotification(ExtendedServer.SetHotspotStatus.type, { hotspotKey, newStatus, fileUri });
     }
 
-    checkLocalHotspotsDetectionSupported(
-        folderUri: string,
-    ): Promise<protocol.CheckLocalDetectionSupportedResponse> {
-        return this.sendRequest(protocol.CheckLocalDetectionSupported.type, {
-            uri: folderUri,
-        })
+    checkLocalHotspotsDetectionSupported(folderUri: string): Promise<ExtendedServer.CheckLocalDetectionSupportedResponse> {
+        return this.sendRequest(ExtendedServer.CheckLocalDetectionSupported.type, { uri: folderUri });
     }
 
-    getHotspotDetails(
-        ruleKey: string,
-        hotspotId: string,
-        fileUri: string,
-    ): Promise<protocol.ShowRuleDescriptionParams> {
-        return this.sendRequest(protocol.GetHotspotDetails.type, {
-            ruleKey,
-            hotspotId,
-            fileUri,
-        })
+    getHotspotDetails(hotspotId: string, fileUri: string): Promise<ShowRuleDescriptionParams> {
+        return this.sendRequest(ExtendedServer.GetHotspotDetails.type, { hotspotId, fileUri });
     }
 
-    didCreateBinding(mode: protocol.BindingCreationMode): Promise<void> {
-        return this.sendNotification(protocol.DidCreateBinding.type, mode)
+    didCreateBinding(mode: ExtendedServer.BindingCreationMode): Promise<void> {
+        return this.sendNotification(ExtendedServer.DidCreateBinding.type, mode);
+    }
+
+    listUserOrganizations(token: string, region: string): Promise<ExtendedServer.Organization[]> {
+        return this.sendRequest(ExtendedServer.ListUserOrganizations.type, { token, region });
+    }
+
+    fixSuggestionResolved(suggestionId: string, accepted: boolean): Promise<void> {
+        return this.sendNotification(ExtendedServer.FixSuggestionResolved.type, { suggestionId, accepted });
+    }
+
+    findingsFiltered(filterType: string): Promise<void> {
+        return this.sendNotification(ExtendedServer.FindingsFilteredNotification.type, { filterType });
+    }
+
+    dumpThreads(): Promise<void> {
+        return this.sendNotification(ExtendedServer.DumpThreadsNotification.type);
     }
 }

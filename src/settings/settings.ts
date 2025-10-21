@@ -1,91 +1,77 @@
 /* --------------------------------------------------------------------------------------------
- * SonarLint for VisualStudio Code
- * Copyright (C) 2017-2024 SonarSource SA
+ * Sonarlint
+ * Copyright (C) 2017-2025 SonarSource SA
  * sonarlint@sonarsource.com
  * Licensed under the LGPLv3 License. See LICENSE.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-'use strict'
+"use strict";
 
-import {
-    commands,
-    ConfigurationTarget,
-    WorkspaceConfiguration,
-    window,
-    workspace,
-} from "coc.nvim"
+import * as coc from "coc.nvim";
 
-let currentConfig: WorkspaceConfiguration
+let currentConfig: coc.WorkspaceConfiguration;
 
-export const SONARLINT_CATEGORY = "sonarlint"
-export const VERBOSE_LOGS = "output.showVerboseLogs"
-export const PATH_TO_COMPILE_COMMANDS = "pathToCompileCommands"
-export const NOTIFY_COMPILE_COMMANDS = "notifyMissingCompileCommands"
+export const SONARLINT_CATEGORY = "sonarlint";
+export const VERBOSE_LOGS = "output.showVerboseLogs";
+export const PATH_TO_COMPILE_COMMANDS = "pathToCompileCommands";
+export const NOTIFY_COMPILE_COMMANDS = "notifyMissingCompileCommands";
 
-export function getSonarLintConfiguration(): WorkspaceConfiguration {
-    return workspace.getConfiguration(SONARLINT_CATEGORY)
+export function getSonarLintConfiguration(): coc.WorkspaceConfiguration {
+    return coc.workspace.getConfiguration(SONARLINT_CATEGORY);
 }
 
 export function isVerboseEnabled(): boolean {
-    return getSonarLintConfiguration().get(VERBOSE_LOGS, false)
+    return getCurrentConfiguration()?.get(VERBOSE_LOGS, false);
 }
 
 export function isNotificationEnabled(): boolean {
-    return getSonarLintConfiguration().get(NOTIFY_COMPILE_COMMANDS, true)
+    return getSonarLintConfiguration().get(NOTIFY_COMPILE_COMMANDS, true);
 }
 
-export function updateNotificationDisabled(value: boolean, target?: ConfigurationTarget | undefined) {
-    getSonarLintConfiguration().update(NOTIFY_COMPILE_COMMANDS, value, target)
+export function updateNotificationDisabled(value: boolean, target?: coc.ConfigurationTarget | undefined) {
+    getSonarLintConfiguration().update(NOTIFY_COMPILE_COMMANDS, value, target);
 }
 
-export function updateCompileCommandsPath(value: string | undefined, target?: ConfigurationTarget | undefined) {
-    getSonarLintConfiguration().update(PATH_TO_COMPILE_COMMANDS, value, target)
+export function enableVerboseLogs() {
+    getCurrentConfiguration()?.update(VERBOSE_LOGS, true, coc.ConfigurationTarget.Global);
+    coc.window.showInformationMessage("Sonarlint: Verbose logging enabled.");
 }
 
-export function updateVerboseLogging(value: boolean, target?: ConfigurationTarget | undefined) {
-    getSonarLintConfiguration().update(VERBOSE_LOGS, value, target)
+export function loadInitialSettings() {
+    currentConfig = getSonarLintConfiguration();
+}
+
+export function getCurrentConfiguration() {
+    return currentConfig;
 }
 
 export function onConfigurationChange() {
-    return workspace.onDidChangeConfiguration((event) => {
+    return coc.workspace.onDidChangeConfiguration((event) => {
         if (!event.affectsConfiguration("sonarlint")) {
-            return
+            return;
         }
-        const newConfig = getSonarLintConfiguration()
-
-        const sonarLintLsConfigChanged = hasSonarLintLsConfigChanged(
-            currentConfig,
-            newConfig,
-        )
+        const newConfig = getSonarLintConfiguration();
+        const sonarLintLsConfigChanged = hasSonarLintLsConfigChanged(currentConfig, newConfig);
 
         if (sonarLintLsConfigChanged) {
-            const msg =
-                "SonarLint Language Server configuration changed, please restart VS Code."
-            const action = "Restart Now"
-            const restartId = "workbench.action.reloadWindow"
-            currentConfig = newConfig
-            window.showWarningMessage(msg, action).then((selection) => {
-                if (action === selection) {
-                    commands.executeCommand(restartId)
-                }
-            })
+            const msg = "Sonarlint server configuration changed, please restart.";
+            currentConfig = newConfig;
+            coc.window.showWarningMessage(msg);
         }
-    })
+    });
 }
 
-function hasSonarLintLsConfigChanged(
-    oldConfig: WorkspaceConfiguration,
-    newConfig: WorkspaceConfiguration,
-) {
-    return (
-        !configKeyEquals("ls.javaHome", oldConfig, newConfig) ||
-        !configKeyEquals("ls.vmargs", oldConfig, newConfig)
-    )
+function hasSonarLintLsConfigChanged(oldConfig, newConfig) {
+    return !configKeyEquals("ls.javaHome", oldConfig, newConfig) || !configKeyEquals("ls.vmargs", oldConfig, newConfig);
 }
 
-function configKeyEquals(
-    key: string,
-    oldConfig: WorkspaceConfiguration,
-    newConfig: WorkspaceConfiguration,
-) {
-    return oldConfig.get(key) === newConfig.get(key)
+function configKeyEquals(key, oldConfig, newConfig) {
+    return oldConfig.get(key) === newConfig.get(key);
+}
+
+export function shouldShowRegionSelection() {
+    return getSonarLintConfiguration().get("earlyAccess.showRegionSelection", false);
+}
+
+export function isFocusingOnNewCode(): boolean {
+    return getSonarLintConfiguration().get("focusOnNewCode", false);
 }

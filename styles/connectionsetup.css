@@ -1,0 +1,109 @@
+/* --------------------------------------------------------------------------------------------
+ * SonarLint for VisualStudio Code
+ * Copyright (C) 2017-2025 SonarSource SA
+ * sonarlint@sonarsource.com
+ * Licensed under the LGPLv3 License. See LICENSE.txt in the project root for license information.
+ * ------------------------------------------------------------------------------------------ */
+
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+p {
+    margin-block: 0.5rem;
+}
+
+ul {
+    margin: 0;
+}
+
+.hidden {
+    display: none;
+}
+
+.formRowWithStatus {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+}
+
+#connectionStatus {
+    display: inline-block;
+}
+
+#tokenStatus {
+    margin-top: 3%;
+    text-align: center;
+    color: green;
+}
+
+/* Tooltip container */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    background-color: var(--vscode-input-background);
+}
+
+/* Tooltip text */
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: var(--vscode-input-foreground);
+    color: #fff;
+    text-align: center;
+    padding: 5px 5px;
+    border-radius: 6px;
+
+    top: -5px;
+    left: 105%;
+
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    z-index: 1;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+}
+
+.warning {
+    color: var(--vscode-inputValidation-warningBorder)
+}
+
+.dropdown-container {
+    width: 100%; /* Full width by default */
+    max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Add space between dropdown and manual input */
+}
+
+vscode-dropdown {
+    width: 100%;
+}
+
+.no-org-info-message {
+    display: flex;
+    align-items: center;
+    margin-top: 8px;
+    padding: 8px;
+    background-color: var(--vscode-textLink-background, rgba(0, 122, 204, 0.1));
+    border-radius: 4px;
+}
+
+.no-org-info-icon {
+    margin-right: 8px;
+    font-size: 14px;
+    color: var(--vscode-textLink-foreground);
+}
+
+@media (max-width: 600px) {
+.dropdown-container {
+    max-width: 100%; /* Full width on smaller screens */
+}
+}
