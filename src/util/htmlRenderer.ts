@@ -105,10 +105,10 @@ const decodeEntitiesBasic = (s: string) => {
         .replace(/&gt;/g, ">")
         .replace(/&amp;/g, "&")
         .replace(/&quot;/g, '"')
-        .replace(/&#39;|&apos;/g, "'");
+        .replace(/(?:&#39;|&apos;)/g, "'");
     // numeric hex/dec entities
-    out = out.replace(/&#x([0-9a-fA-F]+);/g, (_m, hex) => fromCodePointSafe(parseInt(hex, 16)));
-    out = out.replace(/&#([0-9]+);/g, (_m, dec) => fromCodePointSafe(parseInt(dec, 10)));
+    out = out.replace(/&#x([\da-fA-F]+);/g, (_m, hex) => fromCodePointSafe(parseInt(hex, 16)));
+    out = out.replace(/&#(\d+);/g, (_m, dec) => fromCodePointSafe(parseInt(dec, 10)));
     return out;
 };
 
@@ -152,12 +152,12 @@ function hasNonWhitespaceText(el: HTMLElement): boolean {
    =========================== */
 class TextAndHiBuilder {
     public readonly highlights: HighlightItem[] = [];
-    private readonly _buf: string[] = [];
     public line = 0;
     public col = 0;
     public byteCol = 0;
 
     private readonly _bgRects: Array<{ start: number; end: number; group: string; width?: number }> = [];
+    private readonly _buf: string[] = [];
 
     private _byteLen(s: string) {
         return Buffer.byteLength(s, "utf8");
@@ -198,7 +198,7 @@ class TextAndHiBuilder {
         this.append("\n");
     }
 
-    /** Request a rectangular background (inclusive) for lines [start..end] at optional fixed byte width. */
+    /** Mark a rectangular background (inclusive) for lines [start..end] at optional fixed byte width. */
     markBgRect(startLine: number, endLineInclusive: number, group: string, widthBytes?: number) {
         if (endLineInclusive >= startLine) this._bgRects.push({ start: startLine, end: endLineInclusive, group, width: widthBytes });
     }
@@ -240,7 +240,7 @@ function stripImportant(v?: string): string | undefined {
 function resolveVarChain(v: string | undefined, vars: Map<string, string>): string | undefined {
     if (!v) return v;
     let out = v.trim();
-    const re = /var\((--[a-z0-9\-_]+)\)/i;
+    const re = /var\((--[a-z\d\-_]+)\)/i;
     let guard = 5;
     while (guard-- > 0) {
         const m = RegExp(re).exec(out);
@@ -415,7 +415,7 @@ function collectCssVarsFromCssText(cssText: string): Map<string, string> {
         for (const rule of ast.stylesheet.rules) {
             if (rule.type !== "rule") continue;
             const r = rule as css.Rule;
-            if (!r.selectors?.some((s) => s.trim() === ":root")) continue;
+            if (!r.selectors?.some((s: string) => s.trim() === ":root")) continue;
             for (const d of (r.declarations || []) as css.Declaration[]) {
                 if (d.type !== "declaration") continue;
                 const prop = String(d.property ?? "");
@@ -423,7 +423,9 @@ function collectCssVarsFromCssText(cssText: string): Map<string, string> {
                 if (prop.startsWith("--")) vars.set(prop, val);
             }
         }
-    } catch (_) {}
+    } catch {
+        // ignore issues with parsing the css text
+    }
     return vars;
 }
 
@@ -443,7 +445,7 @@ async function loadStylesheets(html: string, rootDir?: string): Promise<string> 
         try {
             combined += (await fs.readFile(filePath, "utf8")) + "\n";
         } catch {
-            // ignore missing/unreadable CSS file
+            // ignore any missing/unreadable css file
         }
     }
     return combined;
@@ -616,8 +618,6 @@ function renderInlineOnly(el: HTMLElement, b: TextAndHiBuilder, ctx: Ctx): boole
             case "samp":
             case "var":
             case "time":
-                if (!renderInlineOnly(child, b, ctxChild)) return false;
-                break;
             default:
                 if (!renderInlineOnly(child, b, ctxChild)) return false;
                 break;
@@ -630,8 +630,26 @@ function renderInlineOnly(el: HTMLElement, b: TextAndHiBuilder, ctx: Ctx): boole
    Render helpers (headers, paragraphs, lists, hr, table, pre, blocks)
    =========================== */
 function renderHeader(el: HTMLElement, b: TextAndHiBuilder, level: number, ctx: Ctx) {
-    const icon =
-        level === 1 ? ICON.h1 : level === 2 ? ICON.h2 : level === 3 ? ICON.h3 : level === 4 ? ICON.h4 : level === 5 ? ICON.h5 : ICON.h6;
+    let icon: string;
+    switch (level) {
+        case 1:
+            icon = ICON.h1;
+            break;
+        case 2:
+            icon = ICON.h2;
+            break;
+        case 3:
+            icon = ICON.h3;
+            break;
+        case 4:
+            icon = ICON.h4;
+            break;
+        case 5:
+            icon = ICON.h5;
+            break;
+        default:
+            icon = ICON.h6;
+    }
     const group = `Header${Math.max(1, Math.min(6, level))}`;
 
     b.append(`${icon} `, combineGroups(group, ctx.ambient));
@@ -692,7 +710,7 @@ function renderBlockContainer(el: HTMLElement, b: TextAndHiBuilder, ctx: Ctx) {
 function renderBlockQuote(el: HTMLElement, b: TextAndHiBuilder, ctx: Ctx) {
     if (b.col !== 0) b.append("\n", combineGroups(undefined, ctx.ambient));
     const txt = collectInline(el, { ...ctx, inPre: false });
-    const lines = txt.replace(/^\n+|\n+$/g, "").split("\n");
+    const lines = txt.replace(/^(?:\n+|\n+)$/g, "").split("\n");
     for (const line of lines) {
         b.append("│ ", combineGroups("BlockQuoteBorder", ctx.ambient));
         b.append(line.trim(), combineGroups("BlockQuote", ctx.ambient));
@@ -765,12 +783,12 @@ function renderTable(el: HTMLElement, b: TextAndHiBuilder, ctx: Ctx) {
         if (cells.length) rows.push(cells);
     };
 
-    const captionEl = el.querySelector("caption") as HTMLElement | null;
+    const captionEl = el.querySelector("caption");
     const captionText = captionEl ? collectInline(captionEl, { ...ctx, inPre: false }).trim() : "";
 
     const thead = el.querySelector("thead");
     if (thead) {
-        const tr = thead.querySelector("tr") as HTMLElement | null;
+        const tr = thead.querySelector("tr");
         if (tr) {
             const tmp: string[] = [];
             for (const th of tr.childNodes) {
@@ -784,9 +802,9 @@ function renderTable(el: HTMLElement, b: TextAndHiBuilder, ctx: Ctx) {
 
     const tbodies = el.querySelectorAll("tbody");
     if (tbodies.length) {
-        for (const tb of tbodies) for (const tr of tb.querySelectorAll("tr")) pushRowFrom(tr as HTMLElement);
+        for (const tb of tbodies) for (const tr of tb.querySelectorAll("tr")) pushRowFrom(tr);
     } else {
-        for (const tr of el.querySelectorAll("tr")) pushRowFrom(tr as HTMLElement);
+        for (const tr of el.querySelectorAll("tr")) pushRowFrom(tr);
     }
 
     const allRows = headerRow ? [headerRow, ...rows] : rows;
@@ -835,9 +853,11 @@ function renderTable(el: HTMLElement, b: TextAndHiBuilder, ctx: Ctx) {
         drawRow(headerRow, "TableHeader");
         drawHBorder("├", "┼", "┤");
     }
-    for (let i = 0; i < rows.length; i++) {
-        drawRow(rows[i], undefined);
-        if (i !== rows.length - 1) drawHBorder("├", "┼", "┤");
+    let ri = 0;
+    for (const row of rows) {
+        drawRow(row);
+        if (ri !== rows.length - 1) drawHBorder("├", "┼", "┤");
+        ri++;
     }
     drawHBorder("└", "┴", "┘");
     b.append("\n");
@@ -869,11 +889,14 @@ function renderPreDiff(preEl: HTMLElement, b: TextAndHiBuilder, ctx: Ctx) {
 
         // n is a div inside the diff container — it may contain hljs spans etc.
         const classes = clsList(n);
-        const overlayGroup = classes.includes(DIFF_ADDED_CLASS)
-            ? "DiffAdd"
-            : classes.includes(DIFF_REMOVED_CLASS)
-              ? "DiffDelete"
-              : undefined;
+        let overlayGroup: string | undefined;
+        if (classes.includes(DIFF_ADDED_CLASS)) {
+            overlayGroup = "DiffAdd";
+        } else if (classes.includes(DIFF_REMOVED_CLASS)) {
+            overlayGroup = "DiffDelete";
+        } else {
+            overlayGroup = undefined;
+        }
 
         // 1) Render this div's children into a small builder so we keep token highlights
         const divTb = new TextAndHiBuilder();
@@ -957,7 +980,7 @@ function renderPreCode(el: HTMLElement, b: TextAndHiBuilder, ctx: Ctx) {
             continue;
         }
         leading = false;
-        renderCodeChild(n, tb as any, { ...ctx, inPre: true });
+        renderCodeChild(n, tb, { ...ctx, inPre: true });
     }
 
     // flush (pad to rectangle, copy HLs, mark background)
@@ -1023,7 +1046,7 @@ function renderNode(node: HNode, b: TextAndHiBuilder, ctx: Ctx) {
             const prefix = ICON.h6;
             b.append(" ");
             b.append(`${prefix}`, combineGroups("ListBullet", ctxLi.ambient));
-            const okInline = renderInlineOnly(node as HTMLElement, b, { ...ctxLi, inPre: false });
+            const okInline = renderInlineOnly(node, b, { ...ctxLi, inPre: false });
             if (!okInline) {
                 const lineText = collectInline(node, { ...ctxLi, inPre: false }).trim();
                 b.append(lineText, combineGroups(undefined, ctxLi.ambient));
@@ -1137,7 +1160,19 @@ function renderNode(node: HNode, b: TextAndHiBuilder, ctx: Ctx) {
             return;
         }
 
-        // Inline containers: recurse
+        // Definition list items
+        case "dl":
+        case "dt":
+        case "dd": {
+            const okInline = renderInlineOnly(node, b, { ...ctxChild, inPre: false });
+            if (!okInline) {
+                const txt = collectInline(node, { ...ctxChild, inPre: false }).trim();
+                if (txt) b.append(txt, combineGroups(undefined, ctxChild.ambient));
+            }
+            b.append("\n");
+            return;
+        }
+
         case "span":
         case "strong":
         case "em":
@@ -1154,24 +1189,6 @@ function renderNode(node: HNode, b: TextAndHiBuilder, ctx: Ctx) {
         case "kbd":
         case "samp":
         case "var":
-        case "time": {
-            for (const c of node.childNodes) renderNode(c, b, ctxChild);
-            return;
-        }
-
-        // Definition list items
-        case "dl":
-        case "dt":
-        case "dd": {
-            const okInline = renderInlineOnly(node, b, { ...ctxChild, inPre: false });
-            if (!okInline) {
-                const txt = collectInline(node, { ...ctxChild, inPre: false }).trim();
-                if (txt) b.append(txt, combineGroups(undefined, ctxChild.ambient));
-            }
-            b.append("\n");
-            return;
-        }
-
         default: {
             for (const c of node.childNodes) renderNode(c, b, ctxChild);
             return;
@@ -1232,6 +1249,7 @@ export async function renderRuleHtmlWithCss(html: string, opts: { rootDir?: stri
     }
 
     const hiCommands: string[] = [];
+
     for (const [group, s] of Object.entries(groupStyle)) {
         const parts = [`hi ${group}`];
         if (s.fg) parts.push(`guifg=${s.fg}`);
@@ -1239,7 +1257,10 @@ export async function renderRuleHtmlWithCss(html: string, opts: { rootDir?: stri
         if (s.gui) parts.push(s.gui);
         if (parts.length > 1) hiCommands.push(parts.join(" "));
     }
-    hiCommands.forEach(async (c) => await nvim.command(c));
+
+    for (const c of hiCommands) {
+        await nvim.command(c);
+    }
 
     setStyleDrivenClassGroups(classToGroup);
     const { text, highlights } = renderFromRoot(root);

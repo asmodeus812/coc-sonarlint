@@ -1,6 +1,6 @@
 {
     "name": "coc-sonarlint",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Coc sonar lint language server extension client",
     "license": "MIT",
     "main": "lib/index.js",
@@ -416,6 +416,138 @@
                     "scope": "machine"
                 }
             }
-        }
+        },
+        "commands": [
+            {
+                "command": "SonarLint.OpenSample",
+                "title": "Open Sample Project",
+                "description": "Open sample to explore SonarLint features"
+            },
+            {
+                "command": "SonarLint.ShowAllRules",
+                "title": "Show All Rules",
+                "description": "Open rules view for SonarLint rules"
+            },
+            {
+                "command": "SonarLint.OpenRuleByKey",
+                "title": "Open Rule by Key…",
+                "description": "Show details for a rule (e.g., java:S1234)"
+            },
+            {
+                "command": "SonarLint.ShowActiveRules",
+                "title": "Show Active Rules",
+                "description": "Display the rules that are currently active"
+            },
+            {
+                "command": "SonarLint.AnalyseOpenFile",
+                "title": "Analyze Active File",
+                "description": "Run analysis on the currently active file"
+            },
+            {
+                "command": "SonarQube.ShowAllFindings",
+                "title": "Show All Findings",
+                "description": "List all issues found by for the workspace"
+            },
+            {
+                "command": "SonarLint.HelpAndFeedback",
+                "title": "Help & Feedback",
+                "description": "Open SonarLint documentation & community links"
+            },
+            {
+                "command": "SonarLint.ShowInactiveRules",
+                "title": "Show Inactive Rules",
+                "description": "Display rules not currently active"
+            },
+            {
+                "command": "SonarLint.EnableVerboseLogs",
+                "title": "Enable Verbose Logs",
+                "description": "Increase logging detail to verbose"
+            },
+            {
+                "command": "SonarLint.InstallManagedJre",
+                "title": "Install Managed JRE",
+                "description": "Download and configure a managed JRE"
+            },
+            {
+                "command": "SonarQube.ShowOpenFilesOnly",
+                "title": "Show Findings for Open Files",
+                "description": "Filter findings on currently opened files"
+            },
+            {
+                "command": "SonarQube.DumpBackendThreads",
+                "title": "Dump Backend Threads",
+                "description": "Capture a thread dump of the analysis backend"
+            },
+            {
+                "command": "SonarQube.ShowConnectionView",
+                "title": "Show Connections",
+                "description": "Open the Connections view"
+            },
+            {
+                "command": "SonarQube.ShowCurrentFileOnly",
+                "title": "Show Findings for Current File",
+                "description": "Filter the findings for active file only"
+            },
+            {
+                "command": "SonarLint.ShowSonarLintOutput",
+                "title": "Show SonarLint Output",
+                "description": "Focus the SonarLint output channel"
+            },
+            {
+                "command": "SonarQube.ShowHighSeverityOnly",
+                "title": "Show High Severity Only",
+                "description": "Filter findings to high-severity issues"
+            },
+            {
+                "command": "SonarLint.ShowMCPConfigurations",
+                "title": "Show MCP Configurations",
+                "description": "Show MCP configuration settings"
+            },
+            {
+                "command": "SonarQube.ShowFixableIssuesOnly",
+                "title": "Show Fixable Issues Only",
+                "description": "Filter findings that have available quick fixes"
+            },
+            {
+                "command": "SonarLint.OpenSonarQubeRulesFile",
+                "title": "Open SonarQube Rules File",
+                "description": "Open rules configuration file, if present"
+            },
+            {
+                "command": "SonarLint.EnableLogsAndShowOutput",
+                "title": "Enable Logs and Show Output",
+                "description": "Enable logging and switch to SonarLint output channel"
+            },
+            {
+                "command": "SonarLint.ScanForHotspotsInFolder",
+                "title": "Scan Folder for Security Hotspots",
+                "description": "Run a hotspot scan in a chosen folder."
+            },
+            {
+                "command": "SonarLint.AutoBindWorkspaceFolders",
+                "title": "Auto-Bind Workspace Folders",
+                "description": "Automatically connection bind workspace folder"
+            },
+            {
+                "command": "SonarLint.OpenMCPServerConfiguration",
+                "title": "Open MCP Server Configuration",
+                "description": "Open configuration for MCP servers"
+            },
+            {
+                "command": "SonarLint.IntroduceSonarQubeRulesFile",
+                "title": "Create SonarQube Rules File",
+                "description": "Add a rules file to the workspace"
+            },
+            {
+                "command": "SonarLint.ConfigureCompilationDatabase",
+                "title": "Configure Compilation Database",
+                "description": "Select/Set path to a compile_commands.json"
+            },
+            {
+                "command": "SonarLint.ShareConnectedModeConfiguration",
+                "title": "Share Connected Mode Configuration",
+                "description": "Generate settings for connected-mode binding"
+            }
+        ]
     }
 }

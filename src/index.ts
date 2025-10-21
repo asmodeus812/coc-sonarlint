@@ -8,32 +8,32 @@
 
 // Must be kept at the top for Node instrumentation to work correctly
 
-import * as ChildProcess from "child_process"
-import * as coc from "coc.nvim"
-import { DateTime } from "luxon"
-import * as Path from "path"
-import { introduceSonarQubeRulesFile, openSonarQubeRulesFile } from "./aiAgentsConfiguration/aiAgentRuleConfig"
+import * as ChildProcess from "child_process";
+import * as coc from "coc.nvim";
+import { DateTime } from "luxon";
+import * as Path from "path";
+import { introduceSonarQubeRulesFile, openSonarQubeRulesFile } from "./aiAgentsConfiguration/aiAgentRuleConfig";
 import {
     AIAgentsConfigurationItem,
     AIAgentsConfigurationTreeDataProvider
-} from "./aiAgentsConfiguration/aiAgentsConfigurationTreeDataProvider"
-import { configureMCPServer, onEmbeddedServerStarted, openMCPServerConfigurationFile } from "./aiAgentsConfiguration/mcpServerConfig"
-import { configureCompilationDatabase, notifyMissingCompileCommands } from "./cfamily/cfamily"
-import { assistCreatingConnection } from "./connected/assistCreatingConnection"
-import { AutoBindingService } from "./connected/autobinding"
-import { BindingService, showSoonUnsupportedVersionMessage } from "./connected/binding"
-import { showConnectionDetails } from "./connected/connectionpanel"
-import { AllConnectionsTreeDataProvider, ConnectionsNode, ConnectionType } from "./connected/connections"
-import { connectToSonarCloud, connectToSonarQube } from "./connected/connectionsetup"
-import { SharedConnectedModeSettingsService } from "./connected/sharedConnectedModeSettingsService"
-import { FileSystemServiceImpl } from "./fileSystem/fileSystemServiceImpl"
-import { FindingsTreeDataProvider, FindingsTreeViewItem } from "./findings/findingsTreeDataProvider"
-import { FilterType, FindingType, getFilterDisplayName, selectAndApplyCodeAction } from "./findings/findingsTreeDataProviderUtil"
-import { FindingNode } from "./findings/findingTypes/findingNode"
-import { NotebookFindingNode } from "./findings/findingTypes/notebookFindingNode"
-import { FixSuggestionService } from "./fixSuggestions/fixSuggestionsService"
-import { HelpAndFeedbackItem } from "./help/constants"
-import { HelpAndFeedbackLink, HelpAndFeedbackTreeDataProvider } from "./help/helpAndFeedbackTreeDataProvider"
+} from "./aiAgentsConfiguration/aiAgentsConfigurationTreeDataProvider";
+import { configureMCPServer, onEmbeddedServerStarted, openMCPServerConfigurationFile } from "./aiAgentsConfiguration/mcpServerConfig";
+import { configureCompilationDatabase, notifyMissingCompileCommands } from "./cfamily/cfamily";
+import { assistCreatingConnection } from "./connected/assistCreatingConnection";
+import { AutoBindingService } from "./connected/autobinding";
+import { BindingService, showSoonUnsupportedVersionMessage } from "./connected/binding";
+import { showConnectionDetails } from "./connected/connectionpanel";
+import { AllConnectionsTreeDataProvider, ConnectionsNode, ConnectionType } from "./connected/connections";
+import { connectToSonarCloud, connectToSonarQube } from "./connected/connectionsetup";
+import { SharedConnectedModeSettingsService } from "./connected/sharedConnectedModeSettingsService";
+import { FileSystemServiceImpl } from "./fileSystem/fileSystemServiceImpl";
+import { FindingsTreeDataProvider, FindingsTreeViewItem } from "./findings/findingsTreeDataProvider";
+import { FilterType, FindingType, getFilterDisplayName, selectAndApplyCodeAction } from "./findings/findingsTreeDataProviderUtil";
+import { FindingNode } from "./findings/findingTypes/findingNode";
+import { NotebookFindingNode } from "./findings/findingTypes/notebookFindingNode";
+import { FixSuggestionService } from "./fixSuggestions/fixSuggestionsService";
+import { HelpAndFeedbackItem } from "./help/constants";
+import { HelpAndFeedbackLink, HelpAndFeedbackTreeDataProvider } from "./help/helpAndFeedbackTreeDataProvider";
 import {
     changeHotspotStatus,
     getFilesForHotspotsAndLaunchScan,
@@ -41,31 +41,31 @@ import {
     showHotspotDetails,
     showSecurityHotspot,
     useProvidedFolderOrPickManuallyAndScan
-} from "./hotspot/hotspots"
-import { IssueService } from "./issue/issue"
-import { resolveIssueMultiStepInput } from "./issue/resolveIssue"
-import { getJavaConfig, installClasspathListener } from "./java/java"
-import { LocationTreeItem, navigateToLocation, SecondaryLocationsTree } from "./location/locations"
-import { SonarLintExtendedLanguageClient } from "./lsp/client"
-import { ConnectionCheckResult, ExtendedClient, ExtendedServer } from "./lsp/protocol"
-import { languageServerCommand } from "./lsp/server"
-import { NewCodeDefinitionService } from "./newcode/newCodeDefinitionService"
-import { maybeShowWiderLanguageSupportNotification } from "./promotions/promotionalNotifications"
-import { showRuleDescription } from "./rules/rulepanel"
-import { AllRulesNode, AllRulesTreeDataProvider, setRulesViewMessage, toggleRule, userNormalizedLanguageKey } from "./rules/rules"
-import { showNotificationForFirstSecretsIssue } from "./secrets/secrets"
-import { AutomaticAnalysisService } from "./settings/automaticAnalysis"
-import { ConnectionSettingsService } from "./settings/connectionsettings"
-import { enableVerboseLogs, isVerboseEnabled, loadInitialSettings, onConfigurationChange } from "./settings/settings"
-import { getConnectionIdForFile } from "./util/bindingUtils"
-import { Commands } from "./util/commands"
-import { getLogOutput, initLogOutput, logToSonarLintOutput, showLogOutput } from "./util/logging"
-import { getPlatform } from "./util/platform"
-import { installManagedJre, JAVA_HOME_CONFIG, resolveRequirements } from "./util/requirements"
-import { CAN_SHOW_MISSING_REQUIREMENT_NOTIF, showSslCertificateConfirmationDialog } from "./util/showMessage"
-import * as util from "./util/util"
-import { filterOutFilesIgnoredForAnalysis, shouldAnalyseFile } from "./util/util"
-import { createBlendingBackgroundHighlight, createDefaultRenderingHighlights } from "./util/webview"
+} from "./hotspot/hotspots";
+import { IssueService } from "./issue/issue";
+import { resolveIssueMultiStepInput } from "./issue/resolveIssue";
+import { getJavaConfig, installClasspathListener } from "./java/java";
+import { LocationTreeItem, navigateToLocation, SecondaryLocationsTree } from "./location/locations";
+import { SonarLintExtendedLanguageClient } from "./lsp/client";
+import { ConnectionCheckResult, ExtendedClient, ExtendedServer } from "./lsp/protocol";
+import { languageServerCommand } from "./lsp/server";
+import { NewCodeDefinitionService } from "./newcode/newCodeDefinitionService";
+import { maybeShowWiderLanguageSupportNotification } from "./promotions/promotionalNotifications";
+import { showRuleDescription } from "./rules/rulepanel";
+import { AllRulesNode, AllRulesTreeDataProvider, setRulesViewMessage, toggleRule, userNormalizedLanguageKey } from "./rules/rules";
+import { showNotificationForFirstSecretsIssue } from "./secrets/secrets";
+import { AutomaticAnalysisService } from "./settings/automaticAnalysis";
+import { ConnectionSettingsService } from "./settings/connectionsettings";
+import { enableVerboseLogs, isVerboseEnabled, loadInitialSettings, onConfigurationChange } from "./settings/settings";
+import { getConnectionIdForFile } from "./util/bindingUtils";
+import { Commands } from "./util/commands";
+import { getLogOutput, initLogOutput, logToSonarLintOutput, showLogOutput } from "./util/logging";
+import { getPlatform } from "./util/platform";
+import { installManagedJre, JAVA_HOME_CONFIG, resolveRequirements } from "./util/requirements";
+import { CAN_SHOW_MISSING_REQUIREMENT_NOTIF, showSslCertificateConfirmationDialog } from "./util/showMessage";
+import * as util from "./util/util";
+import { filterOutFilesIgnoredForAnalysis, shouldAnalyseFile } from "./util/util";
+import { createBlendingBackgroundHighlight, createDefaultRenderingHighlights } from "./util/webview";
 
 const DOCUMENT_SELECTOR = [{ scheme: "file", pattern: "**/*" }];
 
@@ -350,9 +350,6 @@ function registerCommands(context: coc.ExtensionContext) {
         coc.commands.registerCommand(Commands.CONFIGURE_COMPILATION_DATABASE, configureCompilationDatabase),
         coc.commands.registerCommand(Commands.ENABLE_VERBOSE_LOGS, () => enableVerboseLogs()),
         coc.commands.registerCommand(Commands.SHOW_HELP_PANEL, () => util.showTargetView(helpAndFeedbackView, "Help")),
-        coc.commands.registerCommand(Commands.HELP_AND_FEEDBACK_LINK, async (item: HelpAndFeedbackItem) => {
-            await coc.commands.executeCommand("vscode.open", coc.Uri.parse(item.url as string));
-        }),
         coc.commands.registerCommand(Commands.ANALYSE_OPEN_FILE, () => {
             IssueService.instance.analyseOpenFileIgnoringExcludes(true);
             coc.commands.executeCommand(Commands.SHOW_ALL_FINDINGS);
@@ -361,7 +358,15 @@ function registerCommands(context: coc.ExtensionContext) {
             const sampleFileUri = coc.Uri.file(Path.join(context.extensionPath, "walkthrough", "sample.py"));
             const sampleDocument = await coc.workspace.openTextDocument(sampleFileUri);
             await util.focusResourceLocation(sampleDocument.uri);
-        })
+        }),
+        coc.commands.registerCommand(
+            Commands.HELP_AND_FEEDBACK_LINK,
+            async (item: HelpAndFeedbackItem) => {
+                await coc.commands.executeCommand("vscode.open", coc.Uri.parse(item.url as string));
+            },
+            undefined,
+            true
+        )
     );
 
     context.subscriptions.push(
