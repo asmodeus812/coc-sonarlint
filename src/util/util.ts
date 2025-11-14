@@ -422,6 +422,13 @@ export async function focusResourceLocation(location: coc.Uri | string, destWind
 
     if (destWindow !== undefined) {
         await coc.workspace.nvim.call("win_gotoid", [destWindow]);
+    } else {
+        const filetype = await coc.workspace.nvim.eval("&filetype");
+        const buftype = await coc.workspace.nvim.eval("&buftype");
+        if (buftype !== "" || filetype === "cocedits" || filetype === "coctree") {
+            const winid = await coc.workspace.nvim.exec("echo winnr('#')", true);
+            await coc.workspace.nvim.call("win_gotoid", [winid]);
+        }
     }
     await coc.workspace.jumpTo(location, null, openCommand);
 }
