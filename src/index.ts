@@ -189,9 +189,6 @@ export async function activate(context: coc.ExtensionContext) {
                 // enableNotebooks: true,
                 // clientNodePath: coc.workspace.getConfiguration().get("sonarlint.pathToNodeExecutable"),
                 // eslintBridgeServerPath: Path.resolve(context.extensionPath, "eslint-bridge"),
-                omnisharpDirectory: Path.resolve(context.extensionPath, "omnisharp"),
-                csharpOssPath: Path.resolve(context.extensionPath, "analyzers", "sonarcsharp.jar"),
-                csharpEnterprisePath: Path.resolve(context.extensionPath, "analyzers", "csharpenterprise.jar"),
                 connections: coc.workspace
                     .getConfiguration("sonarlint.connectedMode")
                     .get("connections", { sonarqube: [], sonarcloud: [] }),

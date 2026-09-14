@@ -20,7 +20,7 @@ import { logToSonarLintOutput } from "./logging";
 import { PlatformInformation } from "./platform";
 import * as util from "./util";
 
-const REQUIRED_JAVA_VERSION = 17;
+const REQUIRED_JAVA_VERSION = 21;
 
 const isWindows = process.platform.startsWith("win");
 const JAVA_FILENAME = `java${isWindows ? ".exe" : ""}`;

@@ -49,11 +49,6 @@ export async function languageServerCommand(context: coc.ExtensionContext, requi
     params.push(Path.resolve(context.extensionPath, "analyzers", "sonartext.jar"));
     params.push(Path.resolve(context.extensionPath, "analyzers", "sonariac.jar"));
     params.push(Path.resolve(context.extensionPath, "analyzers", "sonarlintomnisharp.jar"));
-    params.push(Path.resolve(context.extensionPath, "analyzers", "sonarcfamily.jar"));
-
-    // TODO: this is probably not needed but kept for future reference to the implementation
-    // it allows us to pull a dependency, on the fly for the analyzers instead of bundling
-    // await maybeAddCFamilyJar(params);
 
     return { command: javaExecutablePath, args: params, transport: TransportKind.stdio };
 }
