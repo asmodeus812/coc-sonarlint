@@ -80,6 +80,7 @@ export namespace Commands {
     export const SHOW_HOTSPOTS_IN_OPEN_FILES = "SonarLint.ShowHotspotsInOpenFiles";
     export const SCAN_FOR_HOTSPOTS_IN_FOLDER = "SonarLint.ScanForHotspotsInFolder";
     export const FORGET_FOLDER_HOTSPOTS = "SonarLint.ForgetFolderHotspots";
+    export const ANALYZE_WORKSPACE = "SonarLint.AnalyzeWorkspace";
 
     export const RESOLVE_ISSUE = "SonarLint.ResolveIssue";
     export const REOPEN_LOCAL_ISSUES = "SonarLint.ReopenLocalIssues";

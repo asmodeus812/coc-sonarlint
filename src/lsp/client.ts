@@ -190,8 +190,8 @@ export class SonarLintExtendedLanguageClient extends coc.LanguageClient {
         return this.sendNotification(ExtendedServer.SetHotspotStatus.type, { hotspotKey, newStatus, fileUri });
     }
 
-    analyzeFilesList(configScopeId: string, fileUris: string[]): Promise<void> {
-        return this.sendNotification(ExtendedServer.AnalyzeFilesList.type, { configScopeId, fileUris });
+    analyzeVCSChangedFiles(configScopeIds: string[]): Promise<void> {
+        return this.sendNotification(ExtendedServer.AnalyzeVCSChangedFiles.type, { configScopeIds });
     }
 
     checkLocalHotspotsDetectionSupported(folderUri: string): Promise<ExtendedServer.CheckLocalDetectionSupportedResponse> {

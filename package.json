@@ -291,6 +291,13 @@
                     "markdownDescription": "Enable or disable on-the-fly analysis of files you work on. When enabled, Sonarlint IDE will automatically analyze open files and show findings in real-time.",
                     "scope": "application"
                 },
+                "sonarlint.changedFilesAnalysisDebounceMs": {
+                    "order": 6,
+                    "type": "number",
+                    "default": 1000,
+                    "markdownDescription": "Delay (in milliseconds) after the last detected file-system change before analyzing files that were modified on disk but are not open in an editor (e.g. by an external tool or AI coding agent). Only applies when `#sonarlint.automaticAnalysis#` is enabled.",
+                    "scope": "resource"
+                },
                 "sonarlint.pathToNodeExecutable": {
                     "order": 10,
                     "type": "string",
@@ -313,8 +320,8 @@
                 "sonarlint.analysisExcludesStandalone": {
                     "order": 13,
                     "type": "string",
-                    "default": "**/node_modules/**,**/.angular/**,**/.next/**,**/.nuxt/**,**/.cargo/**,**/.cache/**,**/.tmp/**,**/.log/**,**/.git/**,**/.svn/**,**/.hg/**,**/.idea/**,**/.vscode/**,**/target/surefire-reports/**,**/target/failsafe-reports/**,**/target/site/**,**/target/generated-resources/**,**/target/*.jar,**/target/*.war,**/target/*.ear,**/target/*.zip,**/target/*.tar,**/target/*.gz,**/build/tmp/**,**/build/reports/**,**/build/distributions/**,**/build/libs/**,**/build/publications/**,**/build/resources/**,**/build/outputs/**,**/build/intermediates/transforms/**,**/*.md,**/*.txt,**/*.log,**/*.lock,**/*.bak,**/*.tmp,**/*.swp,**/*.swo,**/*.DS_Store,**/*.csv,**/*.tsv,**/*.xls,**/*.xlsx,**/*.doc,**/*.docx,**/*.pdf,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.svg,**/*.ico,**/*.woff,**/*.woff2,**/*.ttf,**/*.eot,**/*.otf,**/*.mp3,**/*.mp4,**/*.zip,**/*.tar,**/*.gz,**/*.rar,**/*.7z,**/*.exe,**/*.dll,**/*.so,**/*.dylib,**/*.a,**/*.o,**/*.class,**/*.jar,**/*.war,**/*.ear,**/*.bin,**/*.dat,**/*.db,**/*.sqlite,**/*.dump,**/*.rdb,**/*.rdx,**/*.pid",
-                    "markdownDescription": "Files whose name match this [glob pattern](https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob) will not be processed by analyzers. In [Connected Mode](command:SonarLint.HelpAndFeedbackLinkClicked?%22connectedModeDocs%22) with SonarQube Server or SonarQube Cloud, this property will be ignored and the server's exclusion settings will be applied. No rules are evaluated on excluded files. Example: `**/lib/**,**/*generated*`",
+                    "default": "**/node_modules/**,**/.angular/**,**/.next/**,**/.nuxt/**,**/.cargo/**,**/.cache/**,**/.tmp/**,**/.log/**,**/.git/**,**/.svn/**,**/.hg/**,**/.idea/**,**/.vscode/**,**/target/surefire-reports/**,**/target/failsafe-reports/**,**/target/site/**,**/target/generated-resources/**,**/target/generated-sources/**,**/target/generated-test-sources/**,**/target/classes/**,**/target/test-classes/**,**/target/maven-archiver/**,**/target/maven-status/**,**/target/debug/**,**/target/release/**,**/target/*.jar,**/target/*.war,**/target/*.ear,**/target/*.zip,**/target/*.tar,**/target/*.gz,**/build/tmp/**,**/build/reports/**,**/build/distributions/**,**/build/libs/**,**/build/publications/**,**/build/resources/**,**/build/outputs/**,**/build/intermediates/transforms/**,**/bin/Debug/**,**/bin/Release/**,**/obj/**,**/vendor/**,**/__pycache__/**,**/.venv/**,**/venv/**,**/.pytest_cache/**,**/.mypy_cache/**,**/.tox/**,**/.ruff_cache/**,**/*.egg-info/**,**/dist/**,**/out/**,**/coverage/**,**/.turbo/**,**/.parcel-cache/**,**/.nyc_output/**,**/*.md,**/*.txt,**/*.log,**/*.lock,**/*.bak,**/*.tmp,**/*.swp,**/*.swo,**/*.DS_Store,**/*.csv,**/*.tsv,**/*.xls,**/*.xlsx,**/*.doc,**/*.docx,**/*.pdf,**/*.png,**/*.jpg,**/*.jpeg,**/*.gif,**/*.svg,**/*.ico,**/*.woff,**/*.woff2,**/*.ttf,**/*.eot,**/*.otf,**/*.mp3,**/*.mp4,**/*.zip,**/*.tar,**/*.gz,**/*.rar,**/*.7z,**/*.exe,**/*.dll,**/*.so,**/*.dylib,**/*.a,**/*.o,**/*.class,**/*.jar,**/*.war,**/*.ear,**/*.bin,**/*.dat,**/*.db,**/*.sqlite,**/*.dump,**/*.rdb,**/*.rdx,**/*.pid,**/*.pyc",
+                    "markdownDescription": "Files whose name match this [glob pattern](https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob) will not be processed by analyzers, and will be skipped by workspace-wide analysis features (Analyze Workspace, background analysis of files changed outside the editor). In [Connected Mode](command:SonarLint.HelpAndFeedbackLinkClicked?%22connectedModeDocs%22) with SonarQube Server or SonarQube Cloud, this property will be ignored and the server's exclusion settings will be applied. No rules are evaluated on excluded files. Example: `**/lib/**,**/*generated*`",
                     "scope": "resource"
                 },
                 "sonarlint.ls.javaHome": {
@@ -521,6 +528,11 @@
                 "command": "SonarLint.ScanForHotspotsInFolder",
                 "title": "Scan Folder for Security Hotspots",
                 "description": "Run a hotspot scan in a chosen folder."
+            },
+            {
+                "command": "SonarLint.AnalyzeWorkspace",
+                "title": "Analyze Workspace",
+                "description": "Analyze every supported file in the workspace, whether open or not (works in standalone mode, unlike hotspot scanning)."
             },
             {
                 "command": "SonarLint.AutoBindWorkspaceFolders",

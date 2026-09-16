@@ -36,6 +36,7 @@ import { HelpAndFeedbackItem } from "./help/constants";
 import { HelpAndFeedbackLink, HelpAndFeedbackTreeDataProvider } from "./help/helpAndFeedbackTreeDataProvider";
 import {
     changeHotspotStatus,
+    filesCountCheck,
     getFilesForHotspotsAndLaunchScan,
     showHotspotDescription,
     showHotspotDetails,
@@ -62,13 +63,40 @@ import { Commands } from "./util/commands";
 import { getLogOutput, initLogOutput, logToSonarLintOutput, showLogOutput } from "./util/logging";
 import { getPlatform } from "./util/platform";
 import { installManagedJre, JAVA_HOME_CONFIG, resolveRequirements } from "./util/requirements";
-import { CAN_SHOW_MISSING_REQUIREMENT_NOTIF, showSslCertificateConfirmationDialog } from "./util/showMessage";
-import { code2ProtocolConverter, getUriFromRelativePath } from "./util/uri";
+import {
+    CAN_SHOW_MISSING_REQUIREMENT_NOTIF,
+    HotspotAnalysisConfirmation,
+    showSslCertificateConfirmationDialog
+} from "./util/showMessage";
+import { code2ProtocolConverter } from "./util/uri";
 import * as util from "./util/util";
 import { filterOutFilesIgnoredForAnalysis, shouldAnalyseFile } from "./util/util";
 import { createBlendingBackgroundHighlight, createDefaultRenderingHighlights } from "./util/webview";
 
 const DOCUMENT_SELECTOR = [{ scheme: "file", pattern: "**/*" }];
+
+// Fallback only: used if the live sonarlint/listSupportedFilePatterns request fails or returns nothing
+const CHANGED_FILES_WATCHER_GLOB_FALLBACK_EXTENSIONS = [
+    "c", "h", "cc", "cpp", "cxx", "hh", "hpp", "hxx", "ipp", // C/C++
+    "cs", "razor", // C#
+    "css", "less", "scss", // CSS
+    "html", "xhtml", "cshtml", "vbhtml", "aspx", "ascx", "rhtml", "erb", "shtm", "shtml", // HTML-ish
+    "ipynb", // Jupyter
+    "java", "jav", // Java
+    "js", "jsx", "vue", // JavaScript
+    "php", "php3", "php4", "php5", "phtml", "inc", // PHP
+    "py", // Python
+    "ts", "tsx", // TypeScript
+    "xml", "xsd", "xsl", // XML
+    "yml", "yaml", // YAML
+    "json", // JSON
+    "go", // Go
+    "tf", "bicep", // IaC
+    "rs", "sh" // Rust, Shell (connected-mode only, not in listSupportedFilePatterns)
+];
+// Same shape sonarlint/listSupportedFilePatterns itself returns (one "**/*.ext" pattern per entry)
+// so installChangedFilesWatchers can treat the live response and this fallback identically.
+const CHANGED_FILES_WATCHER_GLOB_FALLBACK = CHANGED_FILES_WATCHER_GLOB_FALLBACK_EXTENSIONS.map((ext) => `**/*.${ext}`);
 
 let aiAgentsConfigurationTreeDataProvider: AIAgentsConfigurationTreeDataProvider;
 let allConnectionsTreeDataProvider: AllConnectionsTreeDataProvider;
@@ -242,6 +270,7 @@ export async function activate(context: coc.ExtensionContext) {
     );
     installClasspathListener(languageClient);
     installCustomRequestHandlers(context);
+    await installChangedFilesWatchers(context);
 
     coc.window.onDidChangeActiveTextEditor((e) => {
         FindingsTreeDataProvider.instance.refresh();
@@ -336,36 +365,191 @@ function suggestBinding(params: ExtendedClient.SuggestBindingParams) {
     AutoBindingService.instance.checkConditionsAndAttemptAutobinding(params);
 }
 
-async function analyzeVcsChangedFiles() {
-    const workspaceFolder = coc.workspace.getWorkspaceFolder(coc.workspace.root) as coc.WorkspaceFolder;
-    if (!workspaceFolder) {
+// Files changed on disk by something other than this editor (an external tool, or an AI coding
+// agent) that aren't open in a buffer never go through the normal didOpen/didChange analysis
+// path. This watches for such changes and analyzes them out-of-band, batched and debounced so a
+// burst of writes (a streaming agent response, a git checkout, ...) triggers one analysis call
+// rather than one per file per write.
+const changedFilesPendingAnalysis = new Set<string>();
+let changedFilesAnalysisTimer: NodeJS.Timeout | undefined;
+
+function scheduleChangedFileAnalysis(fileUri: string) {
+    if (!coc.workspace.getConfiguration("sonarlint").get("automaticAnalysis", true)) {
         return;
     }
-    const workspaceRootPath = coc.Uri.parse(workspaceFolder.uri).fsPath;
+    if (util.isOpenInEditor(fileUri)) {
+        // Already covered by the normal didChange-driven analysis path.
+        return;
+    }
+    if (filterOutFilesIgnoredForAnalysis([fileUri]).fileUris.length === 0) {
+        return;
+    }
 
-    let statusOutput: string;
+    changedFilesPendingAnalysis.add(fileUri);
+    if (changedFilesAnalysisTimer) {
+        clearTimeout(changedFilesAnalysisTimer);
+    }
+    const debounceMs = coc.workspace.getConfiguration("sonarlint").get("changedFilesAnalysisDebounceMs", 1000);
+    changedFilesAnalysisTimer = setTimeout(flushChangedFilesAnalysis, debounceMs);
+}
+
+function unscheduleChangedFileAnalysis(fileUri: string) {
+    changedFilesPendingAnalysis.delete(fileUri);
+}
+
+const noopProgress: coc.Progress<{ message?: string; increment?: number }> = { report: () => {} };
+const noopCancelToken: coc.CancellationToken = {
+    isCancellationRequested: false,
+    onCancellationRequested: () => ({ dispose() {} })
+};
+
+async function flushChangedFilesAnalysis() {
+    changedFilesAnalysisTimer = undefined;
+    if (changedFilesPendingAnalysis.size === 0) {
+        return;
+    }
+
+    const fileUris = [...changedFilesPendingAnalysis].map((uri) => coc.Uri.parse(uri));
+    changedFilesPendingAnalysis.clear();
+
+    // sonarlint/analyzeVCSChangedFiles computes its own git diff server-side and isn't a fit
+    // here (these files may not even be git-tracked); analyseOpenFileIgnoringExcludes with the
+    // file content read straight off disk is the mechanism actually proven to trigger analysis
+    // for files with no open buffer (same helper the hotspot folder-scan feature relies on).
+    const analysisFiles = await util.createAnalysisFilesFromFileUris(fileUris, coc.workspace.textDocuments, noopProgress, noopCancelToken);
+    if (analysisFiles.length === 0) {
+        return;
+    }
+
+    logToSonarLintOutput(
+        `Analyzing ${analysisFiles.length} file(s) changed on disk outside the editor: ${analysisFiles.map((f) => f.uri).join(", ")}`
+    );
+    for (const analysisFile of analysisFiles) {
+        await languageClient.analyseOpenFileIgnoringExcludes(false, analysisFile);
+    }
+}
+
+async function installChangedFilesWatchers(context: coc.ExtensionContext) {
+    let patterns: string[] = [];
     try {
-        statusOutput = await util.execChildProcess("git status --porcelain --no-renames", workspaceRootPath);
+        const workspaceFolder = coc.workspace.getWorkspaceFolder(coc.workspace.root) as coc.WorkspaceFolder;
+        if (workspaceFolder) {
+            const response = await languageClient.getFilePatternsForAnalysis(coc.Uri.parse(workspaceFolder.uri).path);
+            patterns = response.patterns ?? [];
+        }
     } catch (e) {
-        logToSonarLintOutput(`Unable to determine VCS changed files: ${(e as Error).message}`);
+        logToSonarLintOutput(`Unable to fetch supported file patterns, falling back to a static list: ${(e as Error).message}`);
+    }
+
+    if (patterns.length === 0) {
+        patterns = CHANGED_FILES_WATCHER_GLOB_FALLBACK;
+    }
+
+    // Merge plain "**/*.ext"-shaped patterns (everything the LS has actually returned so far)
+    // into one combined glob - one watcher instead of dozens, same file coverage, since they're
+    // logically OR'd together either way. Anything with a different shape (a literal filename, a
+    // nested path, extra wildcards) is watched individually rather than guessing how to merge it.
+    const SIMPLE_EXTENSION_PATTERN = /^\*\*\/\*\.([A-Za-z0-9]+)$/;
+    const extensions: string[] = [];
+    const globsToWatch: string[] = [];
+    for (const pattern of patterns) {
+        const match = SIMPLE_EXTENSION_PATTERN.exec(pattern);
+        if (match) {
+            extensions.push(match[1]);
+        } else {
+            globsToWatch.push(pattern);
+        }
+    }
+    if (extensions.length === 1) {
+        globsToWatch.push(`**/*.${extensions[0]}`);
+    } else if (extensions.length > 1) {
+        globsToWatch.push(`**/*.{${extensions.join(",")}}`);
+    }
+
+    for (const pattern of globsToWatch) {
+        const watcher = coc.workspace.createFileSystemWatcher(pattern);
+        watcher.onDidCreate((uri) => scheduleChangedFileAnalysis(code2ProtocolConverter(uri)));
+        watcher.onDidChange((uri) => scheduleChangedFileAnalysis(code2ProtocolConverter(uri)));
+        watcher.onDidDelete((uri) => unscheduleChangedFileAnalysis(code2ProtocolConverter(uri)));
+        context.subscriptions.push(watcher);
+    }
+    logToSonarLintOutput(`Watching file pattern(s) for changes made outside the editor: ${globsToWatch.join(", ")}`);
+}
+
+async function analyzeVcsChangedFiles() {
+    const workspaceFolders = coc.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+        coc.window.showWarningMessage("No workspace folders found; ignoring request to analyze VCS changed files.");
         return;
     }
 
-    const fileUris = statusOutput
-        .split(/\r?\n/)
-        // porcelain lines are "XY <path>"; skip deletions (no file left to analyze) and blank lines
-        .filter((line) => line.length > 3 && line[0] !== "D" && line[1] !== "D")
-        .map((line) => line.slice(3).trim())
-        .filter((relativePath) => relativePath.length > 0)
-        .map((relativePath) => getUriFromRelativePath(relativePath, workspaceFolder));
-
-    if (fileUris.length === 0) {
-        coc.window.showInformationMessage("No VCS changed files to analyze");
-        return;
-    }
-
-    await languageClient.analyzeFilesList(code2ProtocolConverter(coc.Uri.parse(workspaceFolder.uri)), fileUris);
+    // The LS resolves the actual VCS diff itself per config scope; the client only identifies the scopes.
+    const configScopeIds = workspaceFolders.map((f) => code2ProtocolConverter(coc.Uri.parse(f.uri)));
+    await languageClient.analyzeVCSChangedFiles(configScopeIds);
     coc.commands.executeCommand(Commands.SHOW_ALL_FINDINGS);
+}
+
+async function tooManyWorkspaceFilesConfirmation(filesCount: number): Promise<string | undefined> {
+    return coc.window.showWarningMessage(
+        `There are ${filesCount} files to analyze in the workspace. Analysis may consume significant resources. Do you want to proceed?`,
+        HotspotAnalysisConfirmation.RUN_ANALYSIS,
+        HotspotAnalysisConfirmation.DONT_ANALYZE
+    );
+}
+
+async function analyzeWholeFolder(folderUri: coc.Uri, client: SonarLintExtendedLanguageClient): Promise<void> {
+    const response = await client.getFilePatternsForAnalysis(folderUri.path);
+    return coc.window.withProgress({ title: "Analyzing workspace...", cancellable: true }, async (progress, cancelToken) => {
+        const allFiles = await util.findFilesInFolder(folderUri, cancelToken);
+        if (cancelToken.isCancellationRequested) {
+            return;
+        }
+
+        const matchedFiles = util.getFilesMatchedGlobPatterns(allFiles, response.patterns);
+        if (matchedFiles.length === 0) {
+            coc.window.showInformationMessage("No analyzable files found in the workspace");
+            return;
+        }
+
+        const shouldAnalyze = await filesCountCheck(matchedFiles.length, tooManyWorkspaceFilesConfirmation);
+        if (!shouldAnalyze || cancelToken.isCancellationRequested) {
+            return;
+        }
+
+        const notExcludedUris = filterOutFilesIgnoredForAnalysis(matchedFiles.map((f) => f.toString())).fileUris;
+        if (notExcludedUris.length === 0) {
+            coc.window.showInformationMessage("No analyzable files found in the workspace after applying excludes");
+            return;
+        }
+
+        const analysisFiles = await util.createAnalysisFilesFromFileUris(
+            notExcludedUris.map((u) => coc.Uri.parse(u)),
+            coc.workspace.textDocuments,
+            progress,
+            cancelToken
+        );
+        if (cancelToken.isCancellationRequested || analysisFiles.length === 0) {
+            return;
+        }
+
+        logToSonarLintOutput(`Analyzing workspace: ${analysisFiles.length} file(s) in ${folderUri.fsPath}`);
+        let completed = 0;
+        for (const analysisFile of analysisFiles) {
+            if (cancelToken.isCancellationRequested) {
+                return;
+            }
+            await client.analyseOpenFileIgnoringExcludes(false, analysisFile);
+            completed += 1;
+            progress.report({ message: `Analyzed ${completed}/${analysisFiles.length}`, increment: 50.0 / analysisFiles.length });
+        }
+
+        coc.commands.executeCommand(Commands.SHOW_ALL_FINDINGS);
+        coc.window.showInformationMessage(`Workspace analysis complete: ${analysisFiles.length} file(s) analyzed`);
+    });
+}
+
+async function analyzeWorkspaceCommandHandler(folderUri: coc.Uri) {
+    await useProvidedFolderOrPickManuallyAndScan(folderUri, coc.workspace.workspaceFolders, languageClient, analyzeWholeFolder);
 }
 
 function registerCommands(context: coc.ExtensionContext) {
@@ -581,6 +765,9 @@ function registerCommands(context: coc.ExtensionContext) {
         }),
         coc.commands.registerCommand(Commands.SCAN_FOR_HOTSPOTS_IN_FOLDER, async (folder) => {
             await scanFolderForHotspotsCommandHandler(folder);
+        }),
+        coc.commands.registerCommand(Commands.ANALYZE_WORKSPACE, async (folder) => {
+            await analyzeWorkspaceCommandHandler(folder);
         }),
         coc.commands.registerCommand(Commands.SHOW_HOTSPOT_DESCRIPTION, showHotspotDescription(floatDescriptionFactory), undefined, true),
         coc.commands.registerCommand(
