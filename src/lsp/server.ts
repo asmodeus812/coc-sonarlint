@@ -8,8 +8,10 @@
 import * as coc from "coc.nvim";
 import { TransportKind } from "coc.nvim";
 import * as Path from "path";
+import { maybeAddCFamilyJar } from "../cfamily/ondemand";
 import { getSonarLintConfiguration } from "../settings/settings";
 import { RequirementsData } from "../util/requirements";
+import { logToSonarLintOutput } from "../util/logging";
 import { startedInDebugMode } from "../util/util";
 
 export async function languageServerCommand(context: coc.ExtensionContext, requirements: RequirementsData) {
@@ -49,6 +51,16 @@ export async function languageServerCommand(context: coc.ExtensionContext, requi
     params.push(Path.resolve(context.extensionPath, "analyzers", "sonartext.jar"));
     params.push(Path.resolve(context.extensionPath, "analyzers", "sonariac.jar"));
     params.push(Path.resolve(context.extensionPath, "analyzers", "sonarlintomnisharp.jar"));
+
+    try {
+        // CFamily (C/C++) is no longer bundled or distributed by upstream sonarlint-vscode;
+        // this fetches (and caches) it on demand from a legacy, unofficial Sonar download
+        // endpoint. Failure here must not prevent the language server from starting for
+        // every other language, so it's isolated and logged rather than propagated.
+        await maybeAddCFamilyJar(params);
+    } catch (e) {
+        logToSonarLintOutput(`Unable to add CFamily analyzer, C and C++ analysis will be unavailable: ${(e as Error).message}`);
+    }
 
     return { command: javaExecutablePath, args: params, transport: TransportKind.stdio };
 }

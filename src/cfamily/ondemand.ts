@@ -19,15 +19,19 @@ const PLUGIN_MAX_AGE_MONTHS = -2;
 
 const CFAMILY_PLUGIN_ID = "sonar-cfamily-plugin";
 const CFAMILY_JAR = "sonarcfamily.jar";
+// Upstream sonarlint-vscode retired client-side on-demand download for this analyzer
+// (SLVSCODE-1655) and no longer publishes a version pin for it in package.json, so we
+// track the last known working version ourselves. binaries.sonarsource.com still serves
+// it unauthenticated as of 2026-09, but this is an unofficial/deprecated distribution
+// channel that could disappear or stop being updated without notice.
+const CFAMILY_PLUGIN_VERSION = "6.80.0.98490";
 
 function getOnDemandAnalyzersPath() {
     return path.resolve(util.extensionPath, "..", "sonarsource.sonarlint_ondemand-analyzers");
 }
 
 export async function maybeAddCFamilyJar(params: string[]) {
-    const expectedVersion: string = util
-        .getExtensionPackageJson()
-        .jarDependencies.filter((dep: any) => dep.artifactId === CFAMILY_PLUGIN_ID)[0].version;
+    const expectedVersion: string = CFAMILY_PLUGIN_VERSION;
     const maybeCFamilyJar = path.resolve(getOnDemandAnalyzersPath(), CFAMILY_PLUGIN_ID, expectedVersion, CFAMILY_JAR);
     if (fs.existsSync(maybeCFamilyJar)) {
         params.push(maybeCFamilyJar);
