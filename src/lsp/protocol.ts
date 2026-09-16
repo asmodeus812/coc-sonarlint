@@ -858,6 +858,15 @@ export namespace ExtendedServer {
         );
     }
 
+    export interface AnalyzeFilesListParams {
+        configScopeId: string;
+        fileUris: string[];
+    }
+
+    export namespace AnalyzeFilesList {
+        export const type = new protocol.NotificationType<AnalyzeFilesListParams>("sonarlint/analyzeFilesList");
+    }
+
     export enum BindingCreationMode {
         AUTOMATIC,
         IMPORTED,

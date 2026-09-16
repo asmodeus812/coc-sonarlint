@@ -444,6 +444,11 @@
                 "description": "Run analysis on the currently active file"
             },
             {
+                "command": "SonarLint.AnalyzeVCSChangedFiles",
+                "title": "Analyze VCS Changed Files",
+                "description": "Run analysis on files changed according to git (uncommitted + committed-but-unpushed changes against the reference branch)"
+            },
+            {
                 "command": "SonarQube.ShowAllFindings",
                 "title": "Show All Findings",
                 "description": "List all issues found by for the workspace"

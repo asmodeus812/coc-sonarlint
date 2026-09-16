@@ -63,6 +63,7 @@ import { getLogOutput, initLogOutput, logToSonarLintOutput, showLogOutput } from
 import { getPlatform } from "./util/platform";
 import { installManagedJre, JAVA_HOME_CONFIG, resolveRequirements } from "./util/requirements";
 import { CAN_SHOW_MISSING_REQUIREMENT_NOTIF, showSslCertificateConfirmationDialog } from "./util/showMessage";
+import { code2ProtocolConverter, getUriFromRelativePath } from "./util/uri";
 import * as util from "./util/util";
 import { filterOutFilesIgnoredForAnalysis, shouldAnalyseFile } from "./util/util";
 import { createBlendingBackgroundHighlight, createDefaultRenderingHighlights } from "./util/webview";
@@ -335,6 +336,38 @@ function suggestBinding(params: ExtendedClient.SuggestBindingParams) {
     AutoBindingService.instance.checkConditionsAndAttemptAutobinding(params);
 }
 
+async function analyzeVcsChangedFiles() {
+    const workspaceFolder = coc.workspace.getWorkspaceFolder(coc.workspace.root) as coc.WorkspaceFolder;
+    if (!workspaceFolder) {
+        return;
+    }
+    const workspaceRootPath = coc.Uri.parse(workspaceFolder.uri).fsPath;
+
+    let statusOutput: string;
+    try {
+        statusOutput = await util.execChildProcess("git status --porcelain --no-renames", workspaceRootPath);
+    } catch (e) {
+        logToSonarLintOutput(`Unable to determine VCS changed files: ${(e as Error).message}`);
+        return;
+    }
+
+    const fileUris = statusOutput
+        .split(/\r?\n/)
+        // porcelain lines are "XY <path>"; skip deletions (no file left to analyze) and blank lines
+        .filter((line) => line.length > 3 && line[0] !== "D" && line[1] !== "D")
+        .map((line) => line.slice(3).trim())
+        .filter((relativePath) => relativePath.length > 0)
+        .map((relativePath) => getUriFromRelativePath(relativePath, workspaceFolder));
+
+    if (fileUris.length === 0) {
+        coc.window.showInformationMessage("No VCS changed files to analyze");
+        return;
+    }
+
+    await languageClient.analyzeFilesList(code2ProtocolConverter(coc.Uri.parse(workspaceFolder.uri)), fileUris);
+    coc.commands.executeCommand(Commands.SHOW_ALL_FINDINGS);
+}
+
 function registerCommands(context: coc.ExtensionContext) {
     context.subscriptions.push(
         coc.commands.registerCommand(Commands.ENABLE_LOGS_AND_SHOW_OUTPUT, () => {
@@ -351,6 +384,7 @@ function registerCommands(context: coc.ExtensionContext) {
             IssueService.instance.analyseOpenFileIgnoringExcludes(true);
             coc.commands.executeCommand(Commands.SHOW_ALL_FINDINGS);
         }),
+        coc.commands.registerCommand(Commands.ANALYZE_VCS_CHANGED_FILES, () => analyzeVcsChangedFiles()),
         coc.commands.registerCommand("SonarLint.OpenSample", async () => {
             const sampleFileUri = coc.Uri.file(Path.join(context.extensionPath, "walkthrough", "sample.py"));
             const sampleDocument = await coc.workspace.openTextDocument(sampleFileUri);

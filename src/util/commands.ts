@@ -86,6 +86,7 @@ export namespace Commands {
     export const CHANGE_HOTSPOT_STATUS = "SonarLint.ChangeHotspotStatus";
     export const ENABLE_VERBOSE_LOGS = "SonarLint.EnableVerboseLogs";
     export const ANALYSE_OPEN_FILE = "SonarLint.AnalyseOpenFile";
+    export const ANALYZE_VCS_CHANGED_FILES = "SonarLint.AnalyzeVCSChangedFiles";
     export const AUTO_BIND_WORKSPACE_FOLDERS = "SonarLint.AutoBindWorkspaceFolders";
 
     export const NAVIGATE_FINDING_LOCATION = "SonarLint.NavigateToFindingLocation";
