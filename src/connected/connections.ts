@@ -11,7 +11,6 @@ import { DEFAULT_CONNECTION_ID } from "../commons";
 import { SonarLintExtendedLanguageClient } from "../lsp/client";
 import { ConnectionCheckResult } from "../lsp/protocol";
 import { BaseConnection, ConnectionSettingsService, SonarCloudConnection } from "../settings/connectionsettings";
-import { shouldShowRegionSelection } from "../settings/settings";
 import { ExtendedTreeItem } from "../util/types";
 import { BindingService } from "./binding";
 import { logToSonarLintOutput } from "../util/logging";
@@ -104,13 +103,9 @@ export class AllConnectionsTreeDataProvider implements coc.TreeDataProvider<Conn
                 : ConnectionSettingsService.instance.getSonarCloudConnections();
         const connections = await Promise.all(
             connectionsFromSettings.map(async (c) => {
-                // Display the region prefix in case user is in dogfooding,
-                // has more than 1 SonarQube Cloud connections, and the region is set
+                // Display the region prefix when there is more than 1 SonarQube Cloud connection and the region is set
                 const regionPrefix =
-                    shouldShowRegionSelection() &&
-                    type !== "__sonarqube__" &&
-                    connectionsFromSettings.length > 1 &&
-                    (c as SonarCloudConnection).region
+                    type !== "__sonarqube__" && connectionsFromSettings.length > 1 && (c as SonarCloudConnection).region
                         ? `[${(c as SonarCloudConnection).region}] `
                         : "";
                 const label = c[labelKey] ? c[labelKey] : c[alternativeLabelKey];

@@ -17,7 +17,6 @@ import {
     SonarCloudRegion,
     SonarQubeConnection
 } from "../settings/connectionsettings";
-import { shouldShowRegionSelection } from "../settings/settings";
 import { Commands } from "../util/commands";
 import { renderRuleHtmlWithCss } from "../util/htmlRenderer";
 import { escapeHtml, showWebView } from "../util/webview";
@@ -382,12 +381,11 @@ function renderServerUrlFieldLite(initialState: WebviewInitialState, mode: "crea
     `;
     }
     // SonarCloud region
-    const hidden = !shouldShowRegionSelection();
     const region = initialState.conn.region ?? "EU";
     const euChecked = region === "EU" ? "checked" : "";
     const usChecked = region === "US" ? "checked" : "";
     return `
-    <fieldset ${hidden ? "style='display:none'" : ""}>
+    <fieldset>
       <legend>Select the SonarQube Cloud region you would like to connect to</legend>
       <label><input type="radio" name="region" id="region" value="EU" ${euChecked}/> <b>EU</b> - sonarcloud.io</label><br/>
       <label><input type="radio" name="region" value="US" ${usChecked}/> <b>US</b> - sonarqube.us</label>
