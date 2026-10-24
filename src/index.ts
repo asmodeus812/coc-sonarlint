@@ -61,6 +61,7 @@ import { enableVerboseLogs, isVerboseEnabled, loadInitialSettings, onConfigurati
 import { getConnectionIdForFile } from "./util/bindingUtils";
 import { Commands } from "./util/commands";
 import { getLogOutput, initLogOutput, logToSonarLintOutput, showLogOutput } from "./util/logging";
+import { registerHelp } from "./help";
 import { getPlatform } from "./util/platform";
 import { installManagedJre, JAVA_HOME_CONFIG, resolveRequirements } from "./util/requirements";
 import {
@@ -166,6 +167,7 @@ export function toUrl(filePath: string) {
 }
 
 export async function activate(context: coc.ExtensionContext) {
+    registerHelp(context).catch(error => logToSonarLintOutput(`Unable to register the help page: ${error}`));
     const installTimeKey = "install.time";
     // context.globalState.setKeysForSync([installTimeKey]);
     let installTime = context.globalState.get(installTimeKey);
