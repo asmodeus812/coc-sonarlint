@@ -1,0 +1,228 @@
+*coc-sonarlint.txt*   SonarQube for IDE (SonarLint) for coc.nvim
+
+
+                      COC-SONARLINT REFERENCE MANUAL
+
+
+SonarLint extension for coc.nvim         *coc-sonarlint* *coc-sonarlint-intro*
+
+coc-sonarlint runs the SonarLint language server of Sonar (here "the server")
+in coc.nvim. It analyzes the files you edit and reports quality and security
+issues as diagnostics, offers quick fixes as code actions, shows rule
+descriptions, and lists findings, rules and security hotspots in tree views.
+
+This page describes how to use the extension. Requirements, installation,
+setup and settings are in the README of the extension. The extension adds
+this page to 'runtimepath' when it is activated, no |:helptags| is needed.
+
+                                      Type |gO| to see the table of contents.
+
+==============================================================================
+GETTING STARTED                                          *coc-sonarlint-start*
+
+Open a file of a supported language. The extension starts on C, C++, CUDA,
+Objective-C, OpenCL, Java, C#, VB, PHP, Go, Python, Jupyter, JavaScript,
+TypeScript and their React variants, CSS, Less, SCSS, YAML and JSON files,
+or when the workspace contains a `.sonar.properties` file. It starts the
+server for you; the first analysis runs when the server is ready.
+
+If nothing is reported, open the log with
+|coc-sonarlint-SonarLint.ShowSonarLintOutput| and see Troubleshooting in the
+README, which also lists the warnings you can get.
+
+==============================================================================
+DIAGNOSTICS                                        *coc-sonarlint-diagnostics*
+
+Issues show up like those of any other language server: signs, virtual
+text, |:CocDiagnostics| and the diagnostic list. With
+`sonarlint.automaticAnalysis` enabled (the default), open files are analyzed
+as you type. Files changed on disk outside the editor are analyzed
+`sonarlint.changedFilesAnalysisDebounceMs` (1000 ms) after the last change.
+
+To analyze on demand use |coc-sonarlint-SonarLint.AnalyseOpenFile|,
+|coc-sonarlint-SonarLint.AnalyzeVCSChangedFiles| or
+|coc-sonarlint-SonarLint.AnalyzeWorkspace|. The last two open the findings
+tree when they finish.
+
+==============================================================================
+CODE ACTIONS                                      *coc-sonarlint-code-actions*
+
+On a line with an issue, |<Plug>(coc-codeaction-cursor)| (or your code
+action mapping) lists what the server offers for it: quick fixes that edit the
+code, opening the description of the rule, and deactivating the rule.
+Deactivating writes the rule to `sonarlint.rules` in your settings.
+
+==============================================================================
+RULE DESCRIPTIONS                                        *coc-sonarlint-rules*
+
+Rule descriptions open in a floating window, rendered as text. Open one from
+a code action, from the rules tree, or by key with
+|coc-sonarlint-SonarLint.OpenRuleByKey|, which accepts a rule key such as
+`java:S1234` or a language.
+
+|coc-sonarlint-SonarLint.ShowAllRules| opens the rules tree, and
+|coc-sonarlint-SonarLint.ShowActiveRules| and
+|coc-sonarlint-SonarLint.ShowInactiveRules| filter it. Rules can be
+activated and deactivated from the tree. A workspace rules file is created
+with |coc-sonarlint-SonarLint.IntroduceSonarQubeRulesFile| and opened with
+|coc-sonarlint-SonarLint.OpenSonarQubeRulesFile|.
+
+==============================================================================
+FINDINGS                                              *coc-sonarlint-findings*
+
+|coc-sonarlint-SonarQube.ShowAllFindings| opens the findings tree with every
+issue and hotspot known for the workspace. These commands filter it:
+|coc-sonarlint-SonarQube.ShowOpenFilesOnly|,
+|coc-sonarlint-SonarQube.ShowCurrentFileOnly|,
+|coc-sonarlint-SonarQube.ShowHighSeverityOnly| and
+|coc-sonarlint-SonarQube.ShowFixableIssuesOnly|. Selecting a finding jumps to
+its location; issues with secondary locations show them in the locations
+tree.
+
+==============================================================================
+SECURITY HOTSPOTS                                     *coc-sonarlint-hotspots*
+
+Security hotspots need Connected Mode. Hotspots of open files are reported
+with the issues; |coc-sonarlint-SonarLint.ScanForHotspotsInFolder| scans a
+whole folder. Hotspot details and rule descriptions open in a floating
+window, and the status of a hotspot can be changed when the server allows it.
+
+==============================================================================
+CONNECTED MODE                                  *coc-sonarlint-connected-mode*
+
+Connections and bindings are set up in the settings, see the README.
+|coc-sonarlint-SonarQube.ShowConnectionView| opens the connections tree,
+|coc-sonarlint-SonarLint.AutoBindWorkspaceFolders| binds the workspace
+folders to matching remote projects, and
+|coc-sonarlint-SonarLint.ShareConnectedModeConfiguration| writes the binding
+to a file that can be committed for the team.
+
+==============================================================================
+LOGS                                                      *coc-sonarlint-logs*
+
+The extension logs to the coc output channel `Sonarlint`.
+|coc-sonarlint-SonarLint.ShowSonarLintOutput| opens it,
+|coc-sonarlint-SonarLint.EnableVerboseLogs| turns on verbose logs, and
+|coc-sonarlint-SonarLint.EnableLogsAndShowOutput| does both.
+
+==============================================================================
+COMMANDS                                              *coc-sonarlint-commands*
+
+Run the commands with |:CocCommand| or from |coc-list-commands|.
+
+:CocCommand SonarLint.OpenSample          *coc-sonarlint-SonarLint.OpenSample*
+    Open Sample Project. Open sample to explore SonarLint features.
+
+:CocCommand SonarLint.ShowAllRules      *coc-sonarlint-SonarLint.ShowAllRules*
+    Show All Rules. Open rules view for SonarLint rules.
+
+:CocCommand SonarLint.OpenRuleByKey    *coc-sonarlint-SonarLint.OpenRuleByKey*
+    Open Rule by Key…. Show details for a rule (e.g., java:S1234).
+
+                                     *coc-sonarlint-SonarLint.ShowActiveRules*
+:CocCommand SonarLint.ShowActiveRules
+    Show Active Rules. Display the rules that are currently active.
+
+                                     *coc-sonarlint-SonarLint.AnalyseOpenFile*
+:CocCommand SonarLint.AnalyseOpenFile
+    Analyze Active File. Run analysis on the currently active file.
+
+                              *coc-sonarlint-SonarLint.AnalyzeVCSChangedFiles*
+:CocCommand SonarLint.AnalyzeVCSChangedFiles
+    Analyze VCS Changed Files. Analyze the files git reports as changed:
+    uncommitted changes and commits not yet pushed to the reference branch.
+
+                                     *coc-sonarlint-SonarQube.ShowAllFindings*
+:CocCommand SonarQube.ShowAllFindings
+    Show All Findings. List all issues found in the workspace.
+
+                                     *coc-sonarlint-SonarLint.HelpAndFeedback*
+:CocCommand SonarLint.HelpAndFeedback
+    Help & Feedback. Open SonarLint documentation and community links.
+
+                                   *coc-sonarlint-SonarLint.ShowInactiveRules*
+:CocCommand SonarLint.ShowInactiveRules
+    Show Inactive Rules. Display rules not currently active.
+
+                                   *coc-sonarlint-SonarLint.EnableVerboseLogs*
+:CocCommand SonarLint.EnableVerboseLogs
+    Enable Verbose Logs. Increase logging detail to verbose.
+
+                                   *coc-sonarlint-SonarLint.InstallManagedJre*
+:CocCommand SonarLint.InstallManagedJre
+    Install Managed JRE. Download and configure a managed JRE.
+
+                                   *coc-sonarlint-SonarQube.ShowOpenFilesOnly*
+:CocCommand SonarQube.ShowOpenFilesOnly
+    Show Findings for Open Files. Filter findings on currently opened files.
+
+                                  *coc-sonarlint-SonarQube.DumpBackendThreads*
+:CocCommand SonarQube.DumpBackendThreads
+    Dump Backend Threads. Capture a thread dump of the analysis backend.
+
+                                  *coc-sonarlint-SonarQube.ShowConnectionView*
+:CocCommand SonarQube.ShowConnectionView
+    Show Connections. Open the Connections view.
+
+                                 *coc-sonarlint-SonarQube.ShowCurrentFileOnly*
+:CocCommand SonarQube.ShowCurrentFileOnly
+    Show Findings for Current File. Filter the findings for active file only.
+
+                                 *coc-sonarlint-SonarLint.ShowSonarLintOutput*
+:CocCommand SonarLint.ShowSonarLintOutput
+    Show SonarLint Output. Open the SonarLint output.
+
+                                *coc-sonarlint-SonarQube.ShowHighSeverityOnly*
+:CocCommand SonarQube.ShowHighSeverityOnly
+    Show High Severity Only. Filter findings to high-severity issues.
+
+                               *coc-sonarlint-SonarLint.ShowMCPConfigurations*
+:CocCommand SonarLint.ShowMCPConfigurations
+    Show MCP Configurations. Show MCP configuration settings.
+
+                               *coc-sonarlint-SonarQube.ShowFixableIssuesOnly*
+:CocCommand SonarQube.ShowFixableIssuesOnly
+    Show Fixable Issues Only. Filter findings that have available quick fixes.
+
+                              *coc-sonarlint-SonarLint.OpenSonarQubeRulesFile*
+:CocCommand SonarLint.OpenSonarQubeRulesFile
+    Open SonarQube Rules File. Open rules configuration file, if present.
+
+                             *coc-sonarlint-SonarLint.EnableLogsAndShowOutput*
+:CocCommand SonarLint.EnableLogsAndShowOutput
+    Enable Logs and Show Output. Enable verbose logs and open the SonarLint
+    output.
+
+                             *coc-sonarlint-SonarLint.ScanForHotspotsInFolder*
+:CocCommand SonarLint.ScanForHotspotsInFolder
+    Scan Folder for Security Hotspots. Run a hotspot scan in a chosen folder.
+
+                                    *coc-sonarlint-SonarLint.AnalyzeWorkspace*
+:CocCommand SonarLint.AnalyzeWorkspace
+    Analyze Workspace. Analyze every supported file in the workspace, whether
+    open or not (works in standalone mode, unlike hotspot scanning).
+
+                            *coc-sonarlint-SonarLint.AutoBindWorkspaceFolders*
+:CocCommand SonarLint.AutoBindWorkspaceFolders
+    Auto-Bind Workspace Folders. Bind the workspace folders to matching
+    projects of your connections.
+
+                          *coc-sonarlint-SonarLint.OpenMCPServerConfiguration*
+:CocCommand SonarLint.OpenMCPServerConfiguration
+    Open MCP Server Configuration. Open configuration for MCP servers.
+
+                         *coc-sonarlint-SonarLint.IntroduceSonarQubeRulesFile*
+:CocCommand SonarLint.IntroduceSonarQubeRulesFile
+    Create SonarQube Rules File. Add a rules file to the workspace.
+
+                        *coc-sonarlint-SonarLint.ConfigureCompilationDatabase*
+:CocCommand SonarLint.ConfigureCompilationDatabase
+    Configure Compilation Database. Pick the compile_commands.json to use
+    for C and C++.
+
+                     *coc-sonarlint-SonarLint.ShareConnectedModeConfiguration*
+:CocCommand SonarLint.ShareConnectedModeConfiguration
+    Share Connected Mode Configuration. Write the binding to a file
+    you can commit for the team.
+
+ vim:tw=78:ts=8:sw=4:sts=4:et:ft=help:norl:

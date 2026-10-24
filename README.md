@@ -1,143 +1,71 @@
-# SonarQube (formerly `SonarQube`)
+# coc-sonarlint
 
-`SonarQube` for IDE by [Sonar](https://www.sonarsource.com/) is a free,
-sophisticated static analysis tool that enhances your code quality and security.
-Analyze your code early—as you write or generate it. Local analysis
-automatically identifies quality and security issues in real-time, even with
-AI-generated code. Fix issues found using QuickFix or the AI CodeFix feature,
-before pushing to your SCM. This ensures your code meets your quality standards
-and is safe for running in production.
+SonarQube for IDE (formerly SonarLint) for [coc.nvim](https://github.com/neoclide/coc.nvim).
+It runs the SonarLint language server of [Sonar](https://www.sonarsource.com/) and reports
+quality and security issues while you type, in C, C++, Java, Go, JavaScript, TypeScript, Python,
+PHP, HTML, CSS, YAML/JSON (CloudFormation, Kubernetes, Azure Resource Manager), and secrets in any
+file. With Connected Mode it uses the rule sets and project settings of a SonarQube Server or
+SonarQube Cloud project.
 
-Understand the "why" behind issues with detailed contextual information, turning
-`SonarQube` for IDE into your personal coding tutor, and levelling up your
-coding skills.
-
-Connect to [SonarQube Server](https://www.sonarsource.com/products/sonarqube/)
-or [SonarQube Cloud](https://www.sonarsource.com/products/sonarcloud/) (you can
-create a
-[free SonarQube Cloud account](https://www.sonarsource.com/products/sonarcloud/signup/)
-to get started), to create a powerful, unified code quality platform for your
-team, throughout the software development lifecycle. This connection enables
-sharing of consistent language `rulesets` and project settings, and unlocks
-analysis of deeply hidden security issues, fostering collaboration and code
-uniformity. Additionally, Connected Mode unlocks analysis of languages such as
-COBOL, Apex, PL/SQL, T-SQL, and Ansible.
-
-`SonarQube` for IDE is the only extension you need in ensuring both code quality
-and security. It supports a wide range of languages, including C, C++, Java, Go,
-JavaScript, TypeScript, Python, C#, HTML, CSS, PHP, Kubernetes, Docker and
-PL/SQL. Refer to our documentation for the complete list of supported languages,
-rules, and secret detection capabilities.
-
-## How it works
-
-Simply open any source file, start coding, and you will start seeing issues
-reported by `SonarQube` for IDE. Issues are highlighted in your code and also
-listed in the 'Problems' panel.
-
-You can access the detailed rule description directly from your editor, using
-the provided contextual menu.
-
-![rule description](images/sonarqube-rule-description.gif)
-
-## Static Analysis Rules
-
-Out of the box, `SonarQube` automatically checks your code against the following
-rules:
-
-- [Azure Resource Manager rules](https://rules.sonarsource.com/azureresourcemanager)
-- [C rules](https://rules.sonarsource.com/c)
-- [C++ rules](https://rules.sonarsource.com/cpp)
-- [C# rules](https://rules.sonarsource.com/csharp/)
-- [CloudFormation rules](https://rules.sonarsource.com/cloudformation)
-- [CSS rules](https://rules.sonarsource.com/css)
-- [Docker rules](https://rules.sonarsource.com/docker)
-- [Go rules](https://rules.sonarsource.com/go)
-- [HTML rules](https://rules.sonarsource.com/html)
-- [Java rules](https://rules.sonarsource.com/java)
-- [JavaScript rules](https://rules.sonarsource.com/javascript)
-- [Kubernetes rules](https://rules.sonarsource.com/kubernetes)
-- [Python and IPython notebook rules](https://rules.sonarsource.com/python)
-- [PHP rules](https://rules.sonarsource.com/php)
-- [Secrets rules](https://rules.sonarsource.com/secrets)
-- [Terraform rules](https://rules.sonarsource.com/terraform)
-- [TypeScript rules](https://rules.sonarsource.com/typescript)
+Using it inside Neovim (commands, diagnostics, code actions, rule descriptions, findings,
+hotspots) is described in `:help coc-sonarlint`, available once the extension is active. This
+README covers requirements, installation, setup, settings and troubleshooting.
 
 ## Requirements
 
-The `SonarQube` language server needs a Java Runtime (JRE) 17+. If you do not
-have one provided in your path, please install it first. Below you will find the
-details on how to setup your environment
+- Neovim with coc.nvim 0.0.82 or later.
+- A Java Runtime (JRE) 17 or later to run the language server.
+- For JavaScript and TypeScript: Node.js above 20.12.0, or 22.11.0 or later.
+- For C and C++: a `compile_commands.json` compilation database.
+- For Java: [coc-java](https://github.com/neoclide/coc-java) or a compatible extension.
 
-1.  The `sonarlint.ls.javaHome` variable in Coc settings if set. For instance:
+## Installation
+
+```vim
+:CocInstall coc-sonarlint
+```
+
+The language server and the analyzers ship with the extension. The extension starts when you open a file of a supported language or a
+workspace that contains a `.sonar.properties` file (see `:help coc-sonarlint-start`).
+
+## Setup
+
+### Java runtime
+
+The language server needs Java 17 or later. The extension uses the first one it finds:
+
+1. The `sonarlint.ls.javaHome` setting, for example:
 
 ```json
 {
-    "sonarlint.ls.javaHome": "C:\\Program Files\\Java\\jdk-17"
+    "sonarlint.ls.javaHome": "/usr/lib/jvm/java-17-openjdk"
 }
 ```
 
-2.  Embedded JRE for platform-specific installations
-3.  The value of the `JDK_HOME` environment variable if set
-4.  The value of the `JAVA_HOME` environment variable if set
-5.  On Windows the registry is queried
-6.  If a JRE is still not found then:
-7.  The `PATH` is scanned for `javac`
-8.  On macOS, the parent directory of `javac` is checked for a `java_home`
-    binary. If that binary exists then it is executed and the result is used
-9.  The grandparent directory of `javac` is used. This is similar to
-    `$(dirname $(dirname $(readlink $(which javac))))`
+2. A JRE bundled in the `jre/` folder of the extension.
+3. The `JDK_HOME` environment variable.
+4. The `JAVA_HOME` environment variable.
+5. A Java installation found on the system (the `PATH`).
 
-`SonarQube` then uses the first JRE found in these steps to check its version.
-If a suitable JRE cannot be found at those places, `SonarQube` will ask for your
-permission to download and manage its own version.
+If the setting points to a missing folder or to a folder without `bin/java`, the extension logs
+this to the SonarLint output and tries the next source. If no Java 17+ is found, it offers to
+download a JRE that only SonarLint uses (command `SonarLint.InstallManagedJre`). Extra JVM
+arguments go in `sonarlint.ls.vmargs`, for example `-Xmx1024m`.
 
-This extension also provides a custom root directory where the sonar lint
-binaries are to be found, in case you do not desire to use the one bundled with
-this extension
+### JavaScript and TypeScript
+
+Analysis needs Node.js above 20.12.0, or 22.11.0 or later. The extension finds Node itself; to
+set it explicitly:
 
 ```json
 {
-    "sonarlint.ls.directly": "/home/yourname/sonarlint"
+    "sonarlint.pathToNodeExecutable": "/home/yourname/.nvm/versions/node/v22.11.0/bin/node"
 }
 ```
 
-`SonarQube` will try to prompt you when a compile commands in c or cpp projects
-is not found, to disable that feature globally, and ignore the missing compile
-commands you can set the following property in your coc-settings.json
+### C and C++
 
-```json
-{
-    "sonarlint.notifyMissingCompileCommands": false
-}
-```
-
-The directory must contain two folders, a server/ and analyzers/, where the
-server binary is located in the server/ folder and all analyzer binaries are
-located in the analyzers/ folder
-
-### JS/TS analysis specific requirements
-
-To analyze JavaScript and TypeScript code, `SonarQube` requires a Node.js
-executable. The minimal supported version is `18.18` for standalone analysis or
-Connected Mode with `SonarCloud`. For Connected Mode with `SonarQube`, it
-depends on the version of the JS/TS analyzer on your `SonarQube` server.
-`SonarQube` will attempt to automatically locate Node, or you can force the
-location using:
-
-```json
-{
-    "sonarlint.pathToNodeExecutable": "/home/yourname/.nvm/versions/node/v18.18.0/bin/node"
-}
-```
-
-Analysis of TypeScript in Connected Mode with `SonarQube` requires the server to
-use version 8.1 or above.
-
-### C and C++ analysis specific requirements
-
-To analyze C and C++ code, `SonarQube` requires compile commands json file, That
-file can be obtained by build system yo use to compile and package your project
+C and C++ analysis needs a `compile_commands.json` compilation database from your build system:
 
 ```json
 {
@@ -145,36 +73,25 @@ file can be obtained by build system yo use to compile and package your project
 }
 ```
 
-Note: if you are using Microsoft compiler, the environment should be ready to
-build the code.
+The command `SonarLint.ConfigureCompilationDatabase` lets you pick one of the
+`compile_commands.json` files in the workspace. With the Microsoft compiler, the environment must
+be ready to build the code. If no database is configured, you get a warning, see
+[Troubleshooting](#troubleshooting).
 
-### Java analysis specific requirements
+### Java projects
 
-To enable the support for Java analysis, you need the coc-java or any coc-java
-compliant extension, and of course an up to date JDK or JRE, preferably versions
-above and/or 17
+Java analysis needs coc-java (or a compatible extension), which provides the classpath of the
+project.
 
-## Connected Mode
+### Connected Mode
 
-To enable connected mode you need to `configure two things`, first is the actual
-server to which you would like to connect to, these can either be `SonarCloud`
-or `SonarQube` severs, either way these sonar servers are meant to analyze your
-project source code on a remote server where your project is configured. On the
-remote server a project scope is configured and you can then attach your local
-project/projects to that scope, it is usually advised to have a 1:1 relationship
-between `SonarQube` or `SonarCloud` projects and local projects, even though it
-is possible to have multiple ones under the same `SonarQube` or `SonarCloud`
-project name
+Connected Mode applies the rules and settings of a SonarQube Server or SonarQube Cloud project to
+your local workspace. You configure two things: a connection to the server and a binding of the
+workspace folder to a project on it. Bind one local project to one remote project where you can.
 
-First configure the connection, in this case we have an example that configures
-a connection to a `SonarQube` server that is running locally, we need to also
-provide a connection identifier that is unique. Each connection has a token
-corresponding to it, that must be created by accessing your `SonarQube` server,
-and create a token for your project specifically, it is advised that you create
-and use `user tokens` which have a broader permissions otherwise some features
-`might not work as expected`. This configuration
-`should be put into your global coc-settings` since it is not per workspace but
-providing only connection details for `SonarQube` servers
+1. Create a user token on the server. Project tokens have fewer permissions and some features do
+   not work with them. Add the connection to your global settings (`:CocConfig`); `connectionId`
+   is a unique name you choose:
 
 ```json
 "sonarlint.connectedMode.connections.sonarqube": [
@@ -186,11 +103,9 @@ providing only connection details for `SonarQube` servers
 ],
 ```
 
-Next we have to configure the project locally, to bind the project to a given
-connection we have to adjust the local settings file and add the binding like
-so. This configuration must be added to your local workspace folder
-`coc-settings` file, as it is specifying precisely how to bind the
-`current workspace folder to a given sonar qube server`
+2. Bind the workspace folder in its local settings (`:CocLocalConfig`). `projectKey` is the key
+   you gave the project when you created it on the server, here organization `my_org` and project
+   `sonar-demo`:
 
 ```json
 "sonarlint.connectedMode.project": {
@@ -199,18 +114,9 @@ so. This configuration must be added to your local workspace folder
 }
 ```
 
-Notice that we bind the project to a given connection id, and the `projectKey`
-is a valid `projectKey` that must exist on the `SonarQube` server and must be
-configured with the correct name, in this case that `projectKey` exists and is
-configured on the local server in this example and the project key usually
-consists of an organization id combined with a unique project name as in this
-case above the org id is my_org and the name of the project is sonar-demo. When
-creating a project in `SonarQube` you are required to create / assign a
-`projectKey` to it, that project key is what you must use in this configuration.
-
-Finally you might want to provide a `sonar-project.properties` file which will
-be used by sonar to identify meta data for your project. That is important if
-you are scanning the project for the first time, see below
+Instead of step 2 you can add a `sonar-project.properties` file (or `.sonarcloud.properties`,
+same content) to the workspace. The workspace is then bound to that project key automatically.
+The file is also needed for the first scan of a project:
 
 ```properties
 sonar.projectKey=my_org_sonar-demo
@@ -220,89 +126,75 @@ sonar.sources=src
 sonar.exclusions=**/__pycache__/**,**/*.md
 ```
 
-If you have this file in your workspace the auto binding service will ensure
-that this project is bound to the correct `projectKey`. Otherwise you might have
-to manually configure your `coc-settings` or manually add binding for the
-workspace folder of the project. Another alias for this file is the name -
-`.sonarcloud.properties`, it is the same file and contains the same contents.
+### Local server
 
-## Local server
+You can run SonarQube locally with Docker. The server image is `sonarqube:lts-community` and the
+scanner image is `sonarsource/sonar-scanner-cli`.
 
-It is possible to setup a local sonar qube server. Usually that can be done
-using a docker container, there are two distinct steps, the first one is to
-bootstrap and start the SonarQube server, then create a project inside it,
-create your new token, and finally the second major step is to analyze your
-project, this can be done easily with another throwaway container that runs the
-sonar-scanner against your source directory which must be done for the very
-first time, otherwise you can configure the project to pull source from github
-or other platforms. The sonar server can be run using the following docker
-image -`sonarqube:lts-community`, the scanner on the other hand is contained in
-this image - `sonarsource/sonar-scanner-cli`
-
-This repository contains a docker-compose which starts a fully loaded sonar qube
-server, which you can use by simply running `docker-compose -d`. Then you can
-open your browser and navigate to `http://loalhost:9000`, use admin/admin for th
-username and password, and you can create your first sonar qube project from the
-user interface.
-
-To analyze, scan and load the code of your project you can run the
-`sonar-scan.sh` script also located in this repository. This script `must` be
-run from the local directory of your project, therefore you can simply do
-
-`The sonar-scan script REQUIRES THE sonar-project.properties file to exist in your project directory, it is going to use the information from there such as project key, name and organization id to correctly scan your project directory`
+1. Start the server with the `docker-compose.yml` of this repository: `docker-compose up -d`.
+2. Open `http://localhost:9000`, log in with `admin`/`admin`, create a project and a user token.
+3. Scan the project once (or let the server import it from GitHub or another platform) with
+   `sonar-scan.sh` from this repository. Run it from the project
+   folder (for a monorepo, its root); it reads the project key, name and organization from
+   `sonar-project.properties`:
 
 ```sh
-# navigate to your project workspace folder, for monorepos that is the root of the monorepo
 cd my-project-to-scan
-# ensure you fill the properties file correctly to reflect your environment and setup
-touch sonar-project.properties
-# execute a one shot container sonar-scanner that will upload your project into sonar qube
 ./path-to-sonar-scan-script/sonar-scan.sh --token "<usr-token>" --host http://localhost:9000
 ```
 
-This will create a throwaway container that will load your project into the
-local sonar qube server, this will then force the server to analyze your project
-code.
+The scanner runs in a throwaway container, uploads the code and the server analyzes it.
 
-## MCP Setup
+## Configuration
 
-The sonar server also allows you to provide a Model Context Protocol compliant
-server, the idea is to allow sonar to provide fixes through an AI agent,
-external to sonar server. Sonar itself has some AI capabilities which are
-currently growing but in case you wish to use external provider a json
-configuration for a valid MCP server can be provided
+Settings go in `coc-settings.json` (`:CocConfig`, or `:CocLocalConfig` for the workspace).
 
-## Contributions
+| Key | Type | Default | Effect |
+| --- | --- | --- | --- |
+| `sonarlint.rules` | object | `{}` | Customize applied rule set. |
+| `sonarlint.connectedMode.servers` | array | `[]` | Deprecated. Configure one or more connection(s) to SonarQube (Server, Cloud). |
+| `sonarlint.connectedMode.connections.sonarqube` | array | `[]` | Connect Sonarlint IDE to SonarQube Server to apply the same code quality and security standards as your team. |
+| `sonarlint.connectedMode.connections.sonarcloud` | array | `[]` | Connect Sonarlint IDE to SonarQube Cloud to apply the same code quality and security standards as your team. |
+| `sonarlint.connectedMode.project` | object | `{}` | Bind the current workspace folder to a SonarQube Server or SonarQube Cloud project. |
+| `sonarlint.automaticAnalysis` | boolean | `true` | Enable or disable on-the-fly analysis of files you work on. |
+| `sonarlint.changedFilesAnalysisDebounceMs` | number | `1000` | Delay (in milliseconds) after the last detected file-system change before analyzing files that were modified on disk but are not open in an editor (e.g. by an external tool or AI coding agent). |
+| `sonarlint.pathToNodeExecutable` | string | - | Path to a Node.js executable (versions above 20.12.0, or 22.11.0) used to analyze JavaScript and TypeScript code. |
+| `sonarlint.pathToCompileCommands` | string | - | Path to the active compilation database, e.g. `C:\\Repos\\MyProject\\compile_commands.json` |
+| `sonarlint.testFilePattern` | string | `""` | Files whose name match this glob pattern are considered as test files by analyzers. |
+| `sonarlint.analysisExcludesStandalone` | string | `"**/node_modules/**,**/.angular/**,**...` | Files whose name match this glob pattern will not be processed by analyzers, and will be skipped by workspace-wide analysis features (Analyze Workspace, background analysis of files changed outside the editor). |
+| `sonarlint.ls.javaHome` | string | - | Path to a Java Runtime Environment (17 or more recent) used to launch the Sonarlint Language Server. |
+| `sonarlint.ls.vmargs` | string | - | Extra JVM arguments used to launch the SonarLint Language Server. |
+| `sonarlint.output.showVerboseLogs` | boolean | `false` | Enable verbose log level in the Sonarlint IDE output. |
+| `sonarlint.analyzerProperties` | object | - | Extra properties that could be passed to the code analyzers. |
+| `sonarlint.trace.server` | string or object (`off`, `messages`, `verbose`) | `"off"` | Log the communication between coc.nvim and the language server. |
+| `sonarlint.disableTelemetry` | boolean | `false` | Disable sending anonymous usage statistics to SonarSource. |
+| `sonarlint.focusOnNewCode` | boolean | `false` | If enabled, by default, focusing on new code shows issues introduced in the last 30 days. |
+| `sonarlint.startFlightRecorder` | boolean | `false` | Start the language server's flight recorder mode. |
 
-Please read here about why we
-[deprecated the "Suggest New Features" category](https://community.sonarsource.com/t/introducing-the-product-manager-for-a-day-subcategories/68606)
-on the Community Forum. The truth is that it's extremely difficult for someone
-outside `SonarSource` to comply with our roadmap and expectations. Therefore, we
-typically only accept minor cosmetic changes and typo fixes.
+## Troubleshooting
 
-With that in mind, if you would like to submit a code contribution, please
-create a pull request for this repository. Please explain your motives to
-contribute: what problem you are trying to fix, what improvement you are trying
-to make.
+- Nothing is reported: check that the extension is active (`:CocList extensions`) and open the
+  log with `SonarLint.ShowSonarLintOutput`. `SonarLint.EnableLogsAndShowOutput` turns on verbose
+  logs and opens the log.
+- The server does not start, or "The Java Runtime Environment can not be located. ...": no
+  usable Java 17+ was found (see [Java runtime](#java-runtime)). Choose "Let Sonarlint download the JRE", or set
+  `sonarlint.ls.javaHome` to a Java 17+ home: the folder that contains `bin/java`, not `bin`.
+- No JavaScript or TypeScript issues: set `sonarlint.pathToNodeExecutable` to a supported Node.
+- "SonarLint might be unable to analyze C and C++ file(s) because there is no configured
+  compilation database.": set `sonarlint.pathToCompileCommands`, or choose "Configure compile
+  commands now". "Ask me later again" hides it for this session, "Do not ask for this workspace"
+  and "Never ask or prompt me again" turn it off for the workspace or for good.
+- "Connection to '...' failed: Please verify your token.": the token in the connection settings
+  is not valid for the server. Create a new user token.
+- To see the traffic between coc.nvim and the server, set `sonarlint.trace.server` to `verbose`.
 
-Make sure that you follow our
-[code style](https://github.com/SonarSource/sonar-developer-toolset#code-style)
-and all tests are passing.
+## Development
 
-## Have Questions or Feedback?
-
-For `SonarQube` for IDE support questions ("How do I?", "I got this error,
-why?", ...), please first read the
-[FAQ](https://community.sonarsource.com/t/frequently-asked-questions/7204) and
-then head to the [Sonar forum](https://community.sonarsource.com/c/help/sl).
-There are chances that a question similar to yours has already been answered.
-
-Be aware that this forum is a community, so the standard pleasantries ("Hi",
-"Thanks", ...) are expected. And if you don't get an answer to your thread, you
-should sit on your hands for at least three days before bumping it. Operators
-are not standing by. :-)
-
-Issue tracker (read-only): `https://jira.sonarsource.com`
+```sh
+npm install
+npm run build
+npm run watch    # rebuild on change
+```
 
 ## License
 
