@@ -38,8 +38,10 @@ export async function maybeAddCFamilyJar(params: string[]) {
         await util.extensionContext.globalState.update(lastUsedKey(CFAMILY_PLUGIN_ID, expectedVersion), DateTime.now().toMillis());
         await cleanupOldAnalyzersAsync();
     } else {
-        // Async call is expected here
-        await startDownloadAsync(getOnDemandAnalyzersPath(), expectedVersion);
+        // the download runs in the background, activation does not wait for it; a finished download asks for a reload
+        startDownloadAsync(getOnDemandAnalyzersPath(), expectedVersion).catch((err) =>
+            logToSonarLintOutput(`Failed to download the cfamily jar: ${(err as Error).message}`)
+        );
     }
 }
 
@@ -54,10 +56,9 @@ async function startDownloadAsync(onDemandAnalyzersPath: string, expectedVersion
             cancellable: true
         },
         async (progress, cancelToken) => {
-            const fetchAbort = new AbortController();
+            // coc runs extensions without AbortController, the cancellation token passed to the download stops it
             cancelToken.onCancellationRequested(() => {
                 errorMessage = "Download aborted. Analysis of C and C++ is disabled.";
-                fetchAbort.abort(errorMessage);
             });
             const url = `https://binaries.sonarsource.com/CommercialDistribution/${CFAMILY_PLUGIN_ID}/${CFAMILY_PLUGIN_ID}-${expectedVersion}.jar`;
 
@@ -80,7 +81,9 @@ async function startDownloadAsync(onDemandAnalyzersPath: string, expectedVersion
                 logToSonarLintOutput(`Downloaded the cfamily jar into ${jarPath}`);
                 return true;
             } catch (err) {
-                errorMessage = (err as Error).message;
+                if (!cancelToken.isCancellationRequested) {
+                    errorMessage = (err as Error).message;
+                }
                 return false;
             }
         }
