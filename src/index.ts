@@ -561,7 +561,7 @@ function registerCommands(context: coc.ExtensionContext) {
             showLogOutput();
         }),
         coc.commands.registerCommand(Commands.SHOW_SONARLINT_OUTPUT, () => showLogOutput()),
-        coc.commands.registerCommand(Commands.DUMP_BACKEND_THREADS, () => languageClient.dumpThreads()),
+        coc.commands.registerCommand(Commands.DUMP_BACKEND_THREADS, () => languageClient.dumpThreads(), undefined, true),
         coc.commands.registerCommand(Commands.INSTALL_MANAGED_JRE, installManagedJre),
         coc.commands.registerCommand(Commands.CONFIGURE_COMPILATION_DATABASE, configureCompilationDatabase),
         coc.commands.registerCommand(Commands.ENABLE_VERBOSE_LOGS, () => enableVerboseLogs()),
@@ -599,15 +599,11 @@ function registerCommands(context: coc.ExtensionContext) {
         ),
         coc.commands.registerCommand(
             Commands.CONNECT_TO_SONARQUBE,
-            async () => await connectToSonarQube(context, floatDescriptionFactory)(),
-            undefined,
-            true
+            async () => await connectToSonarQube(context, floatDescriptionFactory)()
         ),
         coc.commands.registerCommand(
             Commands.CONNECT_TO_SONARCLOUD,
-            async () => await connectToSonarCloud(context, floatDescriptionFactory)(),
-            undefined,
-            true
+            async () => await connectToSonarCloud(context, floatDescriptionFactory)()
         ),
         coc.commands.registerCommand(
             Commands.SHOW_ALL_INFO_FOR_CONNECTION,
@@ -805,13 +801,11 @@ function registerCommands(context: coc.ExtensionContext) {
             Commands.REOPEN_LOCAL_ISSUES,
             () => {
                 IssueService.instance.reopenLocalIssues();
-            },
-            undefined,
-            true
+            }
         ),
         coc.commands.registerCommand(Commands.SHOW_ALL_LOCATIONS, showAllLocations, undefined, true),
         coc.commands.registerCommand(Commands.NAVIGATE_TO_LOCATION, navigateToLocation, undefined, true),
-        coc.commands.registerCommand(Commands.CLEAR_LOCATIONS, clearLocations, undefined, true),
+        coc.commands.registerCommand(Commands.CLEAR_LOCATIONS, clearLocations),
         coc.commands.registerCommand(
             Commands.RESOLVE_ISSUE,
             (workspaceUri: string, issueKey: string, fileUri: string, isTaintIssue: boolean, isDependencyRisk = false) =>
@@ -921,33 +915,25 @@ function registerCommands(context: coc.ExtensionContext) {
             "SonarLint.NewCodeDefinition.Enable",
             () => {
                 coc.workspace.getConfiguration("sonarlint").update("focusOnNewCode", true, coc.ConfigurationTarget.Global);
-            },
-            undefined,
-            true
+            }
         ),
         coc.commands.registerCommand(
             "SonarLint.NewCodeDefinition.Disable",
             () => {
                 coc.workspace.getConfiguration("sonarlint").update("focusOnNewCode", false, coc.ConfigurationTarget.Global);
-            },
-            undefined,
-            true
+            }
         ),
         coc.commands.registerCommand(
             "SonarLint.AutomaticAnalysis.Enable",
             () => {
                 coc.workspace.getConfiguration("sonarlint").update("automaticAnalysis", true, coc.ConfigurationTarget.Global);
-            },
-            undefined,
-            true
+            }
         ),
         coc.commands.registerCommand(
             "SonarLint.AutomaticAnalysis.Disable",
             () => {
                 coc.workspace.getConfiguration("sonarlint").update("automaticAnalysis", false, coc.ConfigurationTarget.Global);
-            },
-            undefined,
-            true
+            }
         )
     );
 

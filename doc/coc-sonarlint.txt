@@ -156,10 +156,6 @@ Run the commands with |:CocCommand| or from |coc-list-commands|.
 :CocCommand SonarQube.ShowOpenFilesOnly
     Show Findings for Open Files. Filter findings on currently opened files.
 
-                                  *coc-sonarlint-SonarQube.DumpBackendThreads*
-:CocCommand SonarQube.DumpBackendThreads
-    Dump Backend Threads. Capture a thread dump of the analysis backend.
-
                                   *coc-sonarlint-SonarQube.ShowConnectionView*
 :CocCommand SonarQube.ShowConnectionView
     Show Connections. Open the Connections view.
@@ -224,5 +220,40 @@ Run the commands with |:CocCommand| or from |coc-list-commands|.
 :CocCommand SonarLint.ShareConnectedModeConfiguration
     Share Connected Mode Configuration. Write the binding to a file
     you can commit for the team.
+
+                                  *coc-sonarlint-SonarLint.ConnectToSonarQube*
+:CocCommand SonarLint.ConnectToSonarQube
+    Connect to SonarQube. Open the form for a new SonarQube connection.
+
+                                 *coc-sonarlint-SonarLint.ConnectToSonarCloud*
+:CocCommand SonarLint.ConnectToSonarCloud
+    Connect to SonarCloud. Open the form for a new SonarCloud connection.
+
+                                   *coc-sonarlint-SonarLint.ReopenLocalIssues*
+:CocCommand SonarLint.ReopenLocalIssues
+    Reopen Local Issues. Reopen the issues resolved locally in the current
+    file.
+
+                                      *coc-sonarlint-SonarLint.ClearLocations*
+:CocCommand SonarLint.ClearLocations
+    Clear Locations. Clear the secondary location highlighting in the buffer.
+
+                            *coc-sonarlint-SonarLint.NewCodeDefinition.Enable*
+:CocCommand SonarLint.NewCodeDefinition.Enable
+    Focus on New Code. Turn on the sonarlint.focusOnNewCode setting.
+
+                           *coc-sonarlint-SonarLint.NewCodeDefinition.Disable*
+:CocCommand SonarLint.NewCodeDefinition.Disable
+    Do Not Focus on New Code. Turn off the sonarlint.focusOnNewCode setting.
+
+                            *coc-sonarlint-SonarLint.AutomaticAnalysis.Enable*
+:CocCommand SonarLint.AutomaticAnalysis.Enable
+    Enable Automatic Analysis. Turn on the sonarlint.automaticAnalysis
+    setting.
+
+                           *coc-sonarlint-SonarLint.AutomaticAnalysis.Disable*
+:CocCommand SonarLint.AutomaticAnalysis.Disable
+    Disable Automatic Analysis. Turn off the sonarlint.automaticAnalysis
+    setting.
 
  vim:tw=78:ts=8:sw=4:sts=4:et:ft=help:norl:
