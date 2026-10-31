@@ -238,6 +238,7 @@ Run the commands with |:CocCommand| or from |coc-list-commands|.
                                       *coc-sonarlint-SonarLint.ClearLocations*
 :CocCommand SonarLint.ClearLocations
     Clear Locations. Clear the secondary location highlighting in the buffer.
+    With no locations shown it warns "No SonarLint locations to clear".
 
                             *coc-sonarlint-SonarLint.NewCodeDefinition.Enable*
 :CocCommand SonarLint.NewCodeDefinition.Enable

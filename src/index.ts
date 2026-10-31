@@ -809,7 +809,13 @@ function registerCommands(context: coc.ExtensionContext) {
         ),
         coc.commands.registerCommand(Commands.SHOW_ALL_LOCATIONS, showAllLocations, undefined, true),
         coc.commands.registerCommand(Commands.NAVIGATE_TO_LOCATION, navigateToLocation, undefined, true),
-        coc.commands.registerCommand(Commands.CLEAR_LOCATIONS, clearLocations),
+        coc.commands.registerCommand(Commands.CLEAR_LOCATIONS, () => {
+            if (secondaryLocationTreeDataProvider.hasLocations()) {
+                clearLocations();
+            } else {
+                coc.window.showWarningMessage("No SonarLint locations to clear");
+            }
+        }),
         coc.commands.registerCommand(
             Commands.RESOLVE_ISSUE,
             (workspaceUri: string, issueKey: string, fileUri: string, isTaintIssue: boolean, isDependencyRisk = false) =>

@@ -159,6 +159,10 @@ export class SecondaryLocationsTree implements coc.TreeDataProvider<LocationTree
         this.notifyRootChanged();
     }
 
+    hasLocations(): boolean {
+        return this.rootItem !== null && this.rootItem !== undefined;
+    }
+
     hideLocations() {
         this.rootItem = null;
         this.notifyRootChanged();
