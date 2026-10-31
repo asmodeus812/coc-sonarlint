@@ -125,7 +125,8 @@ Run the commands with |:CocCommand| or from |coc-list-commands|.
 
                                      *coc-sonarlint-SonarLint.AnalyseOpenFile*
 :CocCommand SonarLint.AnalyseOpenFile
-    Analyze Active File. Run analysis on the currently active file.
+    Analyze Active File. Run analysis on the currently active file,
+    and warn when no file is open.
 
                               *coc-sonarlint-SonarLint.AnalyzeVCSChangedFiles*
 :CocCommand SonarLint.AnalyzeVCSChangedFiles

@@ -69,10 +69,12 @@ export class IssueService {
     reopenLocalIssues() {
         const currentlyOpenFileUri = coc.window.activeTextEditor?.document.uri;
         if (currentlyOpenFileUri === undefined) {
+            showNoActiveFileOpenWarning();
             return;
         }
         const workspaceFolder = coc.workspace.getWorkspaceFolder(currentlyOpenFileUri);
         if (workspaceFolder === undefined) {
+            coc.window.showWarningMessage("The current file is outside every workspace folder");
             return;
         }
         const fileRelativePath = getRelativePathWithFileNameFromFullPath(currentlyOpenFileUri, workspaceFolder);
@@ -91,13 +93,14 @@ export class IssueService {
             showNoActiveFileOpenWarning();
             return Promise.resolve();
         }
-        if (textDocument) {
-            const uri = textDocument?.uri;
+        const document = textDocument ?? textEditor.document.textDocument;
+        if (document) {
+            const uri = document.uri;
             return this.languageClient.analyseOpenFileIgnoringExcludes(triggeredByUser, {
                 uri: code2ProtocolConverter(coc.Uri.parse(uri)),
-                languageId: textDocument.languageId,
-                text: textDocument.getText(),
-                version: textDocument.version
+                languageId: document.languageId,
+                text: document.getText(),
+                version: document.version
             });
         }
 

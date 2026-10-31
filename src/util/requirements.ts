@@ -221,6 +221,7 @@ export function installManagedJre() {
             coc.workspace.getConfiguration("sonarlint.ls").update("javaHome", jreInstallDir, coc.ConfigurationTarget.Global);
         } catch (err) {
             logToSonarLintOutput(err);
+            coc.window.showErrorMessage(`SonarLint JRE install failed: ${err instanceof Error ? err.message : String(err)}`);
         }
     });
 }

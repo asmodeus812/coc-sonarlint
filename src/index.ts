@@ -530,7 +530,11 @@ async function analyzeWholeFolder(folderUri: coc.Uri, client: SonarLintExtendedL
             progress,
             cancelToken
         );
-        if (cancelToken.isCancellationRequested || analysisFiles.length === 0) {
+        if (cancelToken.isCancellationRequested) {
+            return;
+        }
+        if (analysisFiles.length === 0) {
+            coc.window.showInformationMessage("No analyzable files could be read in the workspace");
             return;
         }
 
@@ -915,24 +919,28 @@ function registerCommands(context: coc.ExtensionContext) {
             "SonarLint.NewCodeDefinition.Enable",
             () => {
                 coc.workspace.getConfiguration("sonarlint").update("focusOnNewCode", true, coc.ConfigurationTarget.Global);
+                coc.window.showInformationMessage("Focus on new code enabled");
             }
         ),
         coc.commands.registerCommand(
             "SonarLint.NewCodeDefinition.Disable",
             () => {
                 coc.workspace.getConfiguration("sonarlint").update("focusOnNewCode", false, coc.ConfigurationTarget.Global);
+                coc.window.showInformationMessage("Focus on new code disabled");
             }
         ),
         coc.commands.registerCommand(
             "SonarLint.AutomaticAnalysis.Enable",
             () => {
                 coc.workspace.getConfiguration("sonarlint").update("automaticAnalysis", true, coc.ConfigurationTarget.Global);
+                coc.window.showInformationMessage("Automatic analysis enabled");
             }
         ),
         coc.commands.registerCommand(
             "SonarLint.AutomaticAnalysis.Disable",
             () => {
                 coc.workspace.getConfiguration("sonarlint").update("automaticAnalysis", false, coc.ConfigurationTarget.Global);
+                coc.window.showInformationMessage("Automatic analysis disabled");
             }
         )
     );
