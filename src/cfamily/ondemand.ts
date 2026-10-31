@@ -33,6 +33,10 @@ function getOnDemandAnalyzersPath() {
 export async function maybeAddCFamilyJar(params: string[]) {
     const expectedVersion: string = CFAMILY_PLUGIN_VERSION;
     const maybeCFamilyJar = path.resolve(getOnDemandAnalyzersPath(), CFAMILY_PLUGIN_ID, expectedVersion, CFAMILY_JAR);
+    // earlier versions left a folder named like the jar (see startDownloadAsync), the next download replaces it
+    if (fs.existsSync(maybeCFamilyJar) && !fs.statSync(maybeCFamilyJar).isFile()) {
+        fs.rmSync(maybeCFamilyJar, { recursive: true, force: true });
+    }
     if (fs.existsSync(maybeCFamilyJar)) {
         params.push(maybeCFamilyJar);
         await util.extensionContext.globalState.update(lastUsedKey(CFAMILY_PLUGIN_ID, expectedVersion), DateTime.now().toMillis());
@@ -62,13 +66,17 @@ async function startDownloadAsync(onDemandAnalyzersPath: string, expectedVersion
             });
             const url = `https://binaries.sonarsource.com/CommercialDistribution/${CFAMILY_PLUGIN_ID}/${CFAMILY_PLUGIN_ID}-${expectedVersion}.jar`;
 
-            fs.mkdirSync(destinationDir, { recursive: true });
+            // coc's download() treats `dest` as a FOLDER and names the file itself (from the response, or a random
+            // uuid), passing the jar path creates a folder of that name: download into a folder of its own, then move
+            // the file it returns to the jar path
+            const downloadDir = path.join(destinationDir, `.download-${process.pid}-${Date.now()}`);
+            fs.mkdirSync(downloadDir, { recursive: true });
 
             try {
-                await coc.download(
+                const downloaded: string = await coc.download(
                     url,
                     {
-                        dest: jarPath,
+                        dest: downloadDir,
                         onProgress: (percent: string) => {
                             progress.report({
                                 message: "Downloading analyzer for the C/C++ langauges...",
@@ -78,6 +86,8 @@ async function startDownloadAsync(onDemandAnalyzersPath: string, expectedVersion
                     },
                     cancelToken
                 );
+                fs.rmSync(jarPath, { recursive: true, force: true });
+                fs.renameSync(downloaded, jarPath);
                 logToSonarLintOutput(`Downloaded the cfamily jar into ${jarPath}`);
                 return true;
             } catch (err) {
@@ -85,6 +95,8 @@ async function startDownloadAsync(onDemandAnalyzersPath: string, expectedVersion
                     errorMessage = (err as Error).message;
                 }
                 return false;
+            } finally {
+                fs.rmSync(downloadDir, { recursive: true, force: true });
             }
         }
     );
@@ -99,7 +111,7 @@ async function startDownloadAsync(onDemandAnalyzersPath: string, expectedVersion
         }
     } else {
         // Remove partial/invalid file to avoid issues at next start
-        fs.rmSync(jarPath, { force: true });
+        fs.rmSync(jarPath, { recursive: true, force: true });
         coc.window.showErrorMessage(errorMessage);
     }
 }
