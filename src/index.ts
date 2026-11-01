@@ -74,6 +74,14 @@ import * as util from "./util/util";
 import { filterOutFilesIgnoredForAnalysis, shouldAnalyseFile } from "./util/util";
 import { createBlendingBackgroundHighlight, createDefaultRenderingHighlights } from "./util/webview";
 
+// coc disposes a tree view for good when the tab it was shown from closes (private `_targetTabId`, coc.nvim
+// src/tree/TreeView.ts); the view outlives that tab, so the field stays unset
+function keepAcrossTabs(view: object): void {
+    if ("_targetTabId" in view) {
+        Object.defineProperty(view, "_targetTabId", { get: () => undefined, set: () => undefined, configurable: true });
+    }
+}
+
 const DOCUMENT_SELECTOR = [{ scheme: "file", pattern: "**/*" }];
 
 // Fallback only: used if the live sonarlint/listSupportedFilePatterns request fails or returns nothing
@@ -263,6 +271,7 @@ export async function activate(context: coc.ExtensionContext) {
         bufhidden: "hide",
         treeDataProvider: findingsTreeDataProvider
     });
+    keepAcrossTabs(findingsView);
     context.subscriptions.push(findingsView);
 
     context.subscriptions.push(
@@ -283,6 +292,7 @@ export async function activate(context: coc.ExtensionContext) {
         bufhidden: "hide",
         treeDataProvider: allRulesTreeDataProvider
     });
+    keepAcrossTabs(allRulesView);
     setRulesViewMessage(allRulesView);
     context.subscriptions.push(allRulesView);
 
@@ -291,6 +301,7 @@ export async function activate(context: coc.ExtensionContext) {
         bufhidden: "hide",
         treeDataProvider: secondaryLocationTreeDataProvider
     }) as coc.TreeView<LocationTreeItem>;
+    keepAcrossTabs(issueLocationsView);
     context.subscriptions.push(issueLocationsView);
 
     IssueService.init(languageClient, secondaryLocationTreeDataProvider, issueLocationsView);
@@ -336,6 +347,7 @@ export async function activate(context: coc.ExtensionContext) {
         bufhidden: "hide",
         treeDataProvider: allConnectionsTreeDataProvider
     });
+    keepAcrossTabs(allConnectionsView);
     context.subscriptions.push(allConnectionsView);
 
     // Update badge when tree data changes
@@ -350,6 +362,7 @@ export async function activate(context: coc.ExtensionContext) {
         bufhidden: "hide",
         treeDataProvider: helpAndFeedbackTreeDataProvider
     });
+    keepAcrossTabs(helpAndFeedbackView);
     context.subscriptions.push(helpAndFeedbackView);
 
     aiAgentsConfigurationTreeDataProvider = new AIAgentsConfigurationTreeDataProvider();
@@ -357,6 +370,7 @@ export async function activate(context: coc.ExtensionContext) {
         bufhidden: "hide",
         treeDataProvider: aiAgentsConfigurationTreeDataProvider
     });
+    keepAcrossTabs(aiAgentsConfigurationView);
     context.subscriptions.push(aiAgentsConfigurationView);
 
     context.subscriptions.push(onConfigurationChange());
