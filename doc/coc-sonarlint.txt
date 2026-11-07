@@ -233,7 +233,8 @@ Run the commands with |:CocCommand| or from |coc-list-commands|.
                                    *coc-sonarlint-SonarLint.ReopenLocalIssues*
 :CocCommand SonarLint.ReopenLocalIssues
     Reopen Local Issues. Reopen the issues resolved locally in the current
-    file.
+    file. Needs a Connected Mode binding for the folder of the file, without
+    one it warns and does nothing.
 
                                       *coc-sonarlint-SonarLint.ClearLocations*
 :CocCommand SonarLint.ClearLocations

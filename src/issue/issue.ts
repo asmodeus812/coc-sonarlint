@@ -9,6 +9,7 @@
 
 import * as coc from "coc.nvim";
 import { DateTime } from "luxon";
+import { BindingService } from "../connected/binding";
 import { LocationTreeItem, revealTextRange, SecondaryLocationsTree } from "../location/locations";
 import { SonarLintExtendedLanguageClient } from "../lsp/client";
 import { ExtendedClient, ExtendedServer } from "../lsp/protocol";
@@ -75,6 +76,11 @@ export class IssueService {
         const workspaceFolder = coc.workspace.getWorkspaceFolder(currentlyOpenFileUri);
         if (workspaceFolder === undefined) {
             coc.window.showWarningMessage("The current file is outside every workspace folder");
+            return;
+        }
+        // the issues resolved locally are synced through the connection of the binding, the server refuses unbound folders
+        if (!BindingService.instance.isBound(workspaceFolder)) {
+            coc.window.showWarningMessage("Reopening local issues needs a Connected Mode binding for this folder");
             return;
         }
         const fileRelativePath = getRelativePathWithFileNameFromFullPath(currentlyOpenFileUri, workspaceFolder);
