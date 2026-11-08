@@ -18,8 +18,7 @@ import {
     SonarQubeConnection
 } from "../settings/connectionsettings";
 import { Commands } from "../util/commands";
-import { renderRuleHtmlWithCss } from "../util/htmlRenderer";
-import { escapeHtml, showWebView } from "../util/webview";
+import { SonarViews } from "../util/views";
 import { BindingService } from "./binding";
 import { Connection } from "./connections";
 
@@ -40,10 +39,26 @@ const SONARCLOUD_DESCRIPTION = `A <b>Software-as-a-Service (SaaS)</b> tool that 
   <br><br>
   Explore SonarQube Cloud with our <a id="sonarqubeCloudFreeSignUp" href="#">free tier</a>.`;
 
+const HTML_ESCAPES: Readonly<Record<string, string>> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+    "/": "&#x2F;",
+    "`": "&#x60;",
+    "=": "&#x3D;"
+};
+
+/** Escapes a value for the setup page's HTML and attributes (also `/`, `` ` `` and `=`, so it is safe unquoted). */
+function escapeAttribute(value: string): string {
+    return String(value).replace(/[&<>"'/`=]/g, (c: string): string => HTML_ESCAPES[c]);
+}
+
 const SONARQUBE_SERVER_LABEL = "SonarQube Server";
 const SONARQUBE_CLOUD_LABEL = "SonarQube Cloud";
 
-export function connectToSonarQube(context: coc.ExtensionContext, factory: coc.FloatFactory) {
+export function connectToSonarQube(context: coc.ExtensionContext, views: SonarViews) {
     return async (serverUrl = "", projectKey = "", isFromSharedConfiguration = false, folderUri?: coc.Uri) => {
         const initialState = {
             conn: {
@@ -55,11 +70,11 @@ export function connectToSonarQube(context: coc.ExtensionContext, factory: coc.F
                 folderUri: folderUri?.toString(false)
             }
         };
-        await initializeAndShow(context, { mode: "create", initialState }, SONARQUBE_SERVER_LABEL, factory);
+        await initializeAndShow(context, { mode: "create", initialState }, SONARQUBE_SERVER_LABEL, views);
     };
 }
 
-export function connectToSonarCloud(context: coc.ExtensionContext, factory: coc.FloatFactory) {
+export function connectToSonarCloud(context: coc.ExtensionContext, views: SonarViews) {
     return async (
         organizationKey = "",
         projectKey = "",
@@ -78,21 +93,21 @@ export function connectToSonarCloud(context: coc.ExtensionContext, factory: coc.
                 region
             }
         };
-        await initializeAndShow(context, { mode: "create", initialState }, SONARQUBE_CLOUD_LABEL, factory);
+        await initializeAndShow(context, { mode: "create", initialState }, SONARQUBE_CLOUD_LABEL, views);
     };
 }
 
-export function editSonarQubeConnection(_context: coc.ExtensionContext, factory: coc.FloatFactory) {
+export function editSonarQubeConnection(_context: coc.ExtensionContext, views: SonarViews) {
     return async (connection: string | Promise<Connection>) => {
         const connectionId = typeof connection === "string" ? connection : (await connection).id;
         const initialState = {
             conn: await ConnectionSettingsService.instance.loadSonarQubeConnection(connectionId)
         } as WebviewInitialState;
-        await initializeAndShow(_context, { mode: "update", initialState }, SONARQUBE_SERVER_LABEL, factory);
+        await initializeAndShow(_context, { mode: "update", initialState }, SONARQUBE_SERVER_LABEL, views);
     };
 }
 
-export function editSonarCloudConnection(_context: coc.ExtensionContext, factory: coc.FloatFactory) {
+export function editSonarCloudConnection(_context: coc.ExtensionContext, views: SonarViews) {
     return async (connection: string | Promise<Connection>) => {
         const connectionId = typeof connection === "string" ? connection : (await connection).id;
         const existingConnection = await ConnectionSettingsService.instance.loadSonarCloudConnection(connectionId);
@@ -103,20 +118,20 @@ export function editSonarCloudConnection(_context: coc.ExtensionContext, factory
                 existingConnection?.region as string
             )
         } as WebviewInitialState;
-        await initializeAndShow(_context, { mode: "update", initialState }, SONARQUBE_CLOUD_LABEL, factory);
+        await initializeAndShow(_context, { mode: "update", initialState }, SONARQUBE_CLOUD_LABEL, views);
     };
 }
 
-// ★ new: simple “show” (no panel), just build HTML and hand to showWebView
+// Read-only preview of the setup form in the connection view (the form itself is not interactive).
 async function initializeAndShow(
     context: coc.ExtensionContext,
     renderOptions: RenderOptions,
     serverProductName: string,
-    factory: coc.FloatFactory
+    views: SonarViews
 ) {
-    const text = renderConnectionSetupHtml(renderOptions);
-    const result = await renderRuleHtmlWithCss(text);
-    await showWebView(factory, result.text, result.highlights);
+    const html = renderConnectionSetupHtml(renderOptions);
+    const input = { html, lang: "", view: "connection" as const, title: serverProductName };
+    await views.show(input, { name: "sonarlint://connection-setup", extraSheets: ["connectionsetup.css"] });
 }
 
 export async function reportConnectionCheckResult(result: ConnectionCheckResult) {
@@ -179,8 +194,8 @@ function renderConnectionSetupHtml(options: RenderOptions) {
     const serverProductName = isSQ ? SONARQUBE_SERVER_LABEL : SONARQUBE_CLOUD_LABEL;
     const serverDocUrl = isSQ ? sonarQubeNotificationsDocUrl : sonarCloudNotificationsDocUrl;
 
-    const initialConnectionId = escapeHtml(connection.connectionId as string) || "";
-    const initialToken = escapeHtml(connection.token as string);
+    const initialConnectionId = escapeAttribute(connection.connectionId as string) || "";
+    const initialToken = escapeAttribute(connection.token as string);
     const maybeProjectKey = (connection as any).projectKey;
     const saveButtonLabel = maybeProjectKey ? "Save Connection And Bind Project" : "Save Connection";
 
@@ -372,7 +387,7 @@ function renderConnectionSetupHtml(options: RenderOptions) {
 
 function renderServerUrlFieldLite(initialState: WebviewInitialState, mode: "create" | "update") {
     if (isSonarQubeConnection(initialState.conn)) {
-        const serverUrl = escapeHtml(initialState.conn.serverUrl);
+        const serverUrl = escapeAttribute(initialState.conn.serverUrl);
         return `
       <label for="serverUrl"><b>Server URL</b></label>
       <input id="serverUrl" type="url" placeholder="https://your.sonarqube.server/" value="${serverUrl}" required autofocus />
@@ -404,7 +419,7 @@ function renderGenerateTokenButtonLite(connection: SonarQubeConnection | SonarCl
 
 function renderOrganizationKeyFieldLite(initialState: WebviewInitialState) {
     if (isSonarQubeConnection(initialState.conn)) return "";
-    const organizationKey = escapeHtml(initialState.conn.organizationKey || "");
+    const organizationKey = escapeAttribute(initialState.conn.organizationKey || "");
     let options = "";
     if (organizationKey) options += `<option selected>${organizationKey}</option>`;
     if (initialState.userOrganizations && initialState.userOrganizations.length > 0) {
@@ -426,7 +441,7 @@ function renderBindingParagraph(maybeFolderUri: string, maybeProjectKey: string)
     if (maybeFolderUri) {
         const folderUri = coc.Uri.parse(maybeFolderUri);
         const workspaceFolder = coc.workspace.getWorkspaceFolder(folderUri);
-        return `<br>Once the connection is saved, workspace folder '${escapeHtml(workspaceFolder?.name as string)}' will be bound to project '${escapeHtml(
+        return `<br>Once the connection is saved, workspace folder '${escapeAttribute(workspaceFolder?.name as string)}' will be bound to project '${escapeAttribute(
             maybeProjectKey || ""
         )}'.<br>`;
     }

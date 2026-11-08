@@ -13,7 +13,6 @@ import { revealTextRange } from "../location/locations";
 import { SonarLintExtendedLanguageClient } from "../lsp/client";
 import { AnalysisFile, ExtendedClient, ShowRuleDescriptionParams } from "../lsp/protocol";
 import { Commands } from "../util/commands";
-import { renderRuleHtmlWithCss } from "../util/htmlRenderer";
 import { verboseLogToSonarLintOutput } from "../util/logging";
 import {
     HotspotAnalysisConfirmation,
@@ -32,8 +31,8 @@ import {
     getIdeFileExclusions,
     getQuickPickListItemsForWorkspaceFolders
 } from "../util/util";
-import { showWebView } from "../util/webview";
-import { computeHotspotContextPanelContent } from "./hotspotContextPanel";
+import { SonarViews } from "../util/views";
+import { localHotspotView, remoteHotspotView } from "./hotspotView";
 
 export const HOTSPOTS_VIEW_ID = "SonarLint.SecurityHotspots";
 
@@ -58,8 +57,9 @@ export const showSecurityHotspot = async (
         }
         const activeHotspot = remoteHotspot as ExtendedClient.RemoteHotspot;
         await revealInTreeView(activeHotspot, allFindingsView, findingsTreeDataProvider);
+        const sourceWindow: number = (await coc.workspace.nvim.call("win_getid")) as number;
         await coc.commands.executeCommand(Commands.SHOW_HOTSPOT_DESCRIPTION, activeHotspot);
-        await focusResourceLocation(documentUri);
+        await focusResourceLocation(documentUri, sourceWindow);
         await highlightLocation(activeHotspot);
     }
 };
@@ -104,19 +104,10 @@ export function diagnosticSeverity(hotspot: ExtendedClient.RemoteHotspot) {
     }
 }
 
-export const showHotspotDescription = (factory: coc.FloatFactory) => {
-    return async (activeHotspot: any) => {
-        const text = computeHotspotContextPanelContent(
-            activeHotspot.rule.securityCategory,
-            activeHotspot.rule.vulnerabilityProbability,
-            activeHotspot.author,
-            activeHotspot.status,
-            activeHotspot.message,
-            activeHotspot.rule,
-            false
-        );
-        const result = await renderRuleHtmlWithCss(text);
-        await showWebView(factory, result.text, result.highlights);
+/** The SHOW_HOTSPOT_DESCRIPTION command handler: a remote hotspot (sonarlint/showHotspot) in the hotspot view. */
+export const showHotspotDescription = (views: SonarViews) => {
+    return async (activeHotspot: ExtendedClient.RemoteHotspot): Promise<void> => {
+        await views.show(remoteHotspotView(activeHotspot), { name: "sonarlint://hotspot", title: hotspotTitle(activeHotspot.rule.key, activeHotspot.message) });
     };
 };
 
@@ -237,18 +228,18 @@ export function formatDetectedHotspotStatus(statusIndex: number) {
         : ExtendedClient.ExtendedHotspotStatus[statusIndex].toString();
 }
 
-export async function showHotspotDetails(hotspotDetails: ShowRuleDescriptionParams, hotspot: HotspotNode, factory: coc.FloatFactory) {
-    const text = computeHotspotContextPanelContent(
-        "",
-        HotspotReviewPriority[hotspot.vulnerabilityProbability as number],
-        "",
-        formatDetectedHotspotStatus(hotspot.status as number),
-        hotspot.message,
-        hotspotDetails,
-        true
-    );
-    const result = await renderRuleHtmlWithCss(text);
-    await showWebView(factory, result.text, result.highlights);
+/** A locally detected hotspot's details (sonarlint/getHotspotDetails) in the hotspot view. */
+export async function showHotspotDetails(hotspotDetails: ShowRuleDescriptionParams, hotspot: HotspotNode, views: SonarViews) {
+    const input = localHotspotView(hotspotDetails, {
+        message: hotspot.message,
+        probability: HotspotReviewPriority[hotspot.vulnerabilityProbability as number] ?? "",
+        status: formatDetectedHotspotStatus(hotspot.status as number)
+    });
+    await views.show(input, { name: "sonarlint://hotspot", title: hotspotTitle(hotspotDetails.key, hotspot.message) });
+}
+
+function hotspotTitle(ruleKey: string, message: string): string {
+    return `${ruleKey ?? ""}  ${message ?? ""}`.trim();
 }
 
 export async function changeHotspotStatus(

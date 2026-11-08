@@ -1,0 +1,54 @@
+/*
+ * Terminal adaptation of upstream's tab styling (hotspot.css), loaded after the upstream sheets.
+ * Upstream's rem padding becomes whole blank lines in a character grid, so the tab titles lose their vertical padding
+ * and share one line. The selected title keeps its box without a bottom edge, standing on the panel's top line, like
+ * the browser's tab; the other titles get one line of top padding instead, so their text lines up with it. The panel
+ * keeps only its top line. All of these lines are the faint line (VS Code's editor.lineHighlightBorder).
+ */
+
+.tabs .tabLabel {
+  padding: 1em 1ch 0;
+  margin-right: 1ch;
+  border: none;
+}
+
+.tabs input[type='radio']:checked + .tabLabel {
+  margin-bottom: 0;
+  padding: 0 1ch;
+  border: 1px solid var(--vscode-editor-lineHighlightBorder);
+  border-bottom: none;
+}
+
+.tabs .tab {
+  padding: 0 1ch;
+  border: none;
+  border-top: 1px solid var(--vscode-editor-lineHighlightBorder);
+}
+
+.tabs input[type='radio'] + .contextLabel {
+  margin-bottom: 0;
+  padding: 0 1ch;
+  border: none;
+}
+
+/* Code blocks: upstream pads every pre by 10px, the diffed ones by 16px and highlighted code by 1em, which becomes
+ * blank lines in the grid; the border stays (a faint line, like VS Code's editor.lineHighlightBorder). */
+pre,
+.code-difference-scrollable {
+  padding: 0 1ch;
+}
+
+pre code.hljs {
+  padding: 0;
+}
+
+/* Every box line of the Sonar views is the faint line: the capsules (upstream: the impact colour and currentColor),
+ * and the tables and rules inside the tab panels. */
+.impact.capsule,
+.attribute-category,
+.tabs table,
+.tabs th,
+.tabs td,
+.tabs hr {
+  border-color: var(--vscode-editor-lineHighlightBorder);
+}

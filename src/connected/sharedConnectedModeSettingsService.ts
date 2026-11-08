@@ -16,6 +16,7 @@ import { SonarLintExtendedLanguageClient } from "../lsp/client";
 import { ConnectionSuggestion } from "../lsp/protocol";
 import { CustomQuickPickItem, deduplicateSuggestions } from "../util/connectionSuggestionUtils";
 import { logToSonarLintOutput } from "../util/logging";
+import { SonarViews } from "../util/views";
 import { code2ProtocolConverter } from "../util/uri";
 import { sonarCloudRegionToLabel } from "../util/util";
 import { connectToSonarCloud, connectToSonarQube } from "./connectionsetup";
@@ -38,16 +39,16 @@ export class SharedConnectedModeSettingsService implements FileSystemSubscriber 
         languageClient: SonarLintExtendedLanguageClient,
         fileSystemService: FileSystemServiceImpl,
         context: coc.ExtensionContext,
-        factory: coc.FloatFactory
+        views: SonarViews
     ): void {
-        SharedConnectedModeSettingsService._instance = new SharedConnectedModeSettingsService(languageClient, context, factory);
+        SharedConnectedModeSettingsService._instance = new SharedConnectedModeSettingsService(languageClient, context, views);
         fileSystemService.subscribe(SharedConnectedModeSettingsService._instance);
     }
 
     constructor(
         private readonly languageClient: SonarLintExtendedLanguageClient,
         private readonly context: coc.ExtensionContext,
-        private readonly factory: coc.FloatFactory
+        private readonly views: SonarViews
     ) {}
 
     static get instance(): SharedConnectedModeSettingsService {
@@ -118,7 +119,7 @@ export class SharedConnectedModeSettingsService implements FileSystemSubscriber 
                 title: `Which project would you like to bind with the folder '${workspaceFolder.name}/'`
             });
             if (selectedConfig?.description?.includes("SonarQube Cloud")) {
-                await connectToSonarCloud(this.context, this.factory)(
+                await connectToSonarCloud(this.context, this.views)(
                     selectedConfig.description,
                     selectedConfig.label,
                     false,
@@ -126,7 +127,7 @@ export class SharedConnectedModeSettingsService implements FileSystemSubscriber 
                     coc.Uri.parse(workspaceFolder.uri)
                 );
             } else if (selectedConfig?.description === "SonarQube Server") {
-                await connectToSonarQube(this.context, this.factory)(
+                await connectToSonarQube(this.context, this.views)(
                     selectedConfig.description,
                     selectedConfig.label,
                     false,
@@ -152,7 +153,7 @@ export class SharedConnectedModeSettingsService implements FileSystemSubscriber 
         to project '${projectKey}' ${serverReference}. Do you want to use this configuration file to bind this project?`;
         const useConfigurationHandler = async () => {
             if (organization) {
-                connectToSonarCloud(this.context, this.factory)(
+                connectToSonarCloud(this.context, this.views)(
                     organization,
                     projectKey,
                     isFromSharedConfiguration,
@@ -160,7 +161,7 @@ export class SharedConnectedModeSettingsService implements FileSystemSubscriber 
                     coc.Uri.parse(workspaceFolder.uri)
                 );
             } else {
-                connectToSonarQube(this.context, this.factory)(
+                connectToSonarQube(this.context, this.views)(
                     serverUrl,
                     projectKey,
                     isFromSharedConfiguration,

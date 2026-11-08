@@ -12,7 +12,6 @@ import { BindingService } from "../connected/binding";
 import { ExtendedServer } from "../lsp/protocol";
 import { getSonarLintConfiguration } from "../settings/settings";
 import { Commands } from "../util/commands";
-import { capitalizeName } from "../util/webview";
 import { ExtendedTreeItem } from "../util/types";
 
 type RuleLevel = Extract<ExtendedServer.ConfigLevel, "on" | "off">;
@@ -193,6 +192,10 @@ export function setRulesViewMessage(allRulesView: coc.TreeView<LanguageNode>) {
     } else {
         allRulesView.message = "Changes to this view only apply to folders that don't use Connected Mode.";
     }
+}
+
+function capitalizeName(name: string): string {
+    return name.replace(/\b(\w)/g, (s: string): string => s.toUpperCase());
 }
 
 export function allTrue(values: boolean[]) {

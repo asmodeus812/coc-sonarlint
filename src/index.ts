@@ -72,7 +72,7 @@ import {
 import { code2ProtocolConverter } from "./util/uri";
 import * as util from "./util/util";
 import { filterOutFilesIgnoredForAnalysis, shouldAnalyseFile } from "./util/util";
-import { createBlendingBackgroundHighlight, createDefaultRenderingHighlights } from "./util/webview";
+import { SonarViews } from "./util/views";
 
 // coc disposes a tree view for good when the tab it was shown from closes (private `_targetTabId`, coc.nvim
 // src/tree/TreeView.ts); the view outlives that tab, so the field stays unset
@@ -122,7 +122,7 @@ let helpAndFeedbackView: coc.TreeView<HelpAndFeedbackLink>;
 let issueLocationsView: coc.TreeView<LocationTreeItem>;
 let aiAgentsConfigurationView: coc.TreeView<AIAgentsConfigurationItem>;
 
-let floatDescriptionFactory: coc.FloatFactory;
+let views: SonarViews;
 
 const currentProgress: Record<string, { progress: coc.Progress<{ increment?: number }>; resolve: () => void } | undefined> = {};
 
@@ -188,10 +188,7 @@ export async function activate(context: coc.ExtensionContext) {
     initLogOutput(context);
     util.setExtensionContext(context);
 
-    floatDescriptionFactory = coc.window.createFloatFactory({});
-    context.subscriptions.push(floatDescriptionFactory);
-    await createDefaultRenderingHighlights();
-    await createBlendingBackgroundHighlight();
+    views = new SonarViews(context.extensionPath);
 
     const serverOptions = () => runJavaServer(context);
 
@@ -249,7 +246,7 @@ export async function activate(context: coc.ExtensionContext) {
     ConnectionSettingsService.init(context, languageClient);
     NewCodeDefinitionService.init(context, languageClient);
     FileSystemServiceImpl.init();
-    SharedConnectedModeSettingsService.init(languageClient, FileSystemServiceImpl.instance, context, floatDescriptionFactory);
+    SharedConnectedModeSettingsService.init(languageClient, FileSystemServiceImpl.instance, context, views);
     BindingService.init(
         languageClient,
         context.workspaceState,
@@ -617,11 +614,11 @@ function registerCommands(context: coc.ExtensionContext) {
         ),
         coc.commands.registerCommand(
             Commands.CONNECT_TO_SONARQUBE,
-            async () => await connectToSonarQube(context, floatDescriptionFactory)()
+            async () => await connectToSonarQube(context, views)()
         ),
         coc.commands.registerCommand(
             Commands.CONNECT_TO_SONARCLOUD,
-            async () => await connectToSonarCloud(context, floatDescriptionFactory)()
+            async () => await connectToSonarCloud(context, views)()
         ),
         coc.commands.registerCommand(
             Commands.SHOW_ALL_INFO_FOR_CONNECTION,
@@ -631,7 +628,7 @@ function registerCommands(context: coc.ExtensionContext) {
             undefined,
             true
         ),
-        coc.commands.registerCommand(Commands.SHOW_CONNECTION_INFO, showConnectionDetails(floatDescriptionFactory), undefined, true),
+        coc.commands.registerCommand(Commands.SHOW_CONNECTION_INFO, showConnectionDetails(views), undefined, true),
         coc.commands.registerCommand(
             Commands.ADD_PROJECT_BINDING,
             (connectionBinding) => BindingService.instance.createOrEditBinding(connectionBinding.id, connectionBinding.contextValue),
@@ -785,12 +782,12 @@ function registerCommands(context: coc.ExtensionContext) {
         coc.commands.registerCommand(Commands.ANALYZE_WORKSPACE, async (folder) => {
             await analyzeWorkspaceCommandHandler(folder);
         }),
-        coc.commands.registerCommand(Commands.SHOW_HOTSPOT_DESCRIPTION, showHotspotDescription(floatDescriptionFactory), undefined, true),
+        coc.commands.registerCommand(Commands.SHOW_HOTSPOT_DESCRIPTION, showHotspotDescription(views), undefined, true),
         coc.commands.registerCommand(
             Commands.SHOW_HOTSPOT_DETAILS,
             async (hotspot: FindingNode) => {
                 const hotspotDetails = await languageClient.getHotspotDetails(hotspot.key, hotspot.fileUri);
-                await showHotspotDetails(hotspotDetails, hotspot, floatDescriptionFactory);
+                await showHotspotDetails(hotspotDetails, hotspot, views);
             },
             undefined,
             true
@@ -1039,7 +1036,7 @@ function installCustomRequestHandlers(context: coc.ExtensionContext) {
     languageClient.onNotification(ExtendedClient.ShowFixSuggestion.type, (params: ExtendedClient.ShowFixSuggestionParams) =>
         FixSuggestionService.instance.showFixSuggestion(params)
     );
-    languageClient.onNotification(ExtendedClient.ShowRuleDescriptionNotification.type, showRuleDescription(floatDescriptionFactory));
+    languageClient.onNotification(ExtendedClient.ShowRuleDescriptionNotification.type, showRuleDescription(views));
     languageClient.onNotification(ExtendedClient.SuggestBindingNotification.type, (params: ExtendedClient.SuggestBindingParams) =>
         suggestBinding(params)
     );
