@@ -1,0 +1,123 @@
+
+<h1><big>htmlview demo</big> <span class="muted">(demo:S0000)</span></h1>
+<div class="taxonomy">
+  <span class="capsule clean-code-attribute" title="Consistency"><span class="attribute-category">Consistency</span> <span class="attribute">Conventional</span></span>
+  <span class="capsule impact impact-blocker">Security · Blocker</span>
+  <span class="capsule impact impact-high">Reliability · High</span>
+  <span class="capsule impact impact-medium">Maintainability · Medium</span>
+  <span class="capsule impact impact-low">Low</span>
+  <span class="capsule impact impact-info">Info</span>
+  <span class="capsule severity-critical">Critical</span>
+  <span class="capsule severity-major">Major</span>
+  <span class="capsule severity-minor">Minor</span>
+</div>
+<div class="info-banner-wrapper"><p class="info-banner"><img alt="info"> This is an info banner, like the taint and hotspot notices.</p></div>
+
+<dl class="hotspot-header">
+  <dd>Category</dd><dt>SQL Injection</dt>
+  <dd>Review priority</dd><dt><span class="hotspot-probability hotspot-probability-high">High</span></dt>
+  <dd>Status</dd><dt>To review</dt>
+</dl>
+
+<div class="rule-desc">
+<h2 id="inline">Inline elements</h2>
+<p>Plain text with <strong>strong</strong>, <b>bold</b>, <em>em</em>, <i>italic</i>, <u>underline</u>, <s>strike</s>,
+<mark>mark</mark>, <kbd>Ctrl+C</kbd>, H<sub>2</sub>O, x<sup>2</sup>, <code>inline code</code>, a
+<a href="https://rules.sonarsource.com/java/RSPEC-2077">url link</a> and an <a href="#tables">anchor link</a>.
+Entities: &rarr; &mdash; &hellip; &ne; &copy; &amp; literal &amp;#39; and non&nbsp;breaking&nbsp;space.
+Wide text: 日本語のテキスト and emoji 🚀✅. An image: <img alt="diagram of the flow" src="x.png">.</p>
+<p>A long paragraph to show wrapping: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+aliquip ex ea commodo consequat. averyveryveryverylongwordwithoutanybreakopportunitytoshowhardsplittingbehaviour.</p>
+
+<h2 id="lists">Lists</h2>
+<ul>
+  <li>First item with <code>code</code></li>
+  <li>Second item, which contains a nested list:
+    <ul>
+      <li>Nested one</li>
+      <li>Nested two with a code block:
+        <pre>int x = 1;
+	return x; // tab indented</pre>
+      </li>
+    </ul>
+  </li>
+  <li>Third item after the nesting</li>
+</ul>
+<ol start="3">
+  <li>Ordered, starting at three</li>
+  <li>Four</li>
+</ol>
+<ul class="other-context-list">
+  <li class="do">Do: validate the input</li>
+  <li class="dont">Don't: concatenate SQL strings</li>
+</ul>
+
+<blockquote><p>A blockquote, with <strong>emphasis</strong> inside, wrapping across several lines when the window is
+narrow enough to need it.</p></blockquote>
+<hr>
+
+<h2 id="tables">Tables</h2>
+<table>
+  <caption>Rule parameters</caption>
+  <thead><tr><th>Parameter</th><th>Description</th><th>Default</th></tr></thead>
+  <tbody>
+    <tr><td><code>max</code></td><td>Maximum allowed value, with a longer description that has to wrap inside its cell</td><td>10</td></tr>
+    <tr><td><code>名前</code></td><td>CJK cell 日本語</td><td>—</td></tr>
+    <tr><td colspan="2">A cell spanning two columns</td><td>x</td></tr>
+  </tbody>
+</table>
+<dl>
+  <dt>Term</dt><dd>Its definition, as a definition list.</dd>
+  <dt>Another term</dt><dd><p>A definition with a paragraph</p><ul><li>and a list</li></ul></dd>
+</dl>
+
+<h2 id="code">Code</h2>
+<h3>Java</h3>
+<pre><code class="language-java">public class Demo {
+    // a comment
+    private static final String QUERY = "SELECT * FROM users WHERE id = ?";
+    public int count(List&lt;String&gt; items) { return items.size(); }
+}</code></pre>
+<h3>Python</h3>
+<pre><code class="language-py">def greet(name: str) -&gt; str:
+    """Docstring."""
+    return f"Hello, {name}!"  # comment</code></pre>
+<h3>XML</h3>
+<pre><code class="language-xml">&lt;dependency&gt;
+  &lt;groupId&gt;org.example&lt;/groupId&gt;
+  &lt;version&gt;1.0&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+
+<h3>Noncompliant code example</h3>
+<pre data-diff-id="1" data-diff-type="noncompliant">String query = "SELECT * FROM users WHERE name = '" + name + "'";
+Statement stmt = connection.createStatement();
+ResultSet rs = stmt.executeQuery(query);</pre>
+<h3>Compliant solution</h3>
+<pre data-diff-id="1" data-diff-type="compliant">String query = "SELECT * FROM users WHERE name = ?";
+PreparedStatement stmt = connection.prepareStatement(query);
+stmt.setString(1, name);
+ResultSet rs = stmt.executeQuery();</pre>
+</div>
+
+<div class="tabs">
+  <input type="radio" name="tabs" id="tab-0" checked><label class="tabLabel" for="tab-0">Why is this an issue?</label>
+  <section class="tab"><p>Tab one: the explanation of the issue.</p></section>
+  <input type="radio" name="tabs" id="tab-1"><label class="tabLabel" for="tab-1">How can I fix it?</label>
+  <section class="tab">
+    <section class="contextualTabContainer" data-default-context-key="spring">
+      <input type="radio" class="contextualTab" name="ctx" id="context-0" data-context-key="servlet">
+      <label class="contextLabel" for="context-0" data-context-key="servlet">Servlet</label>
+      <section class="tab"><p>Servlet context: use <code>HttpServletRequest.getParameter</code> carefully.</p></section>
+      <input type="radio" class="contextualTab" name="ctx" id="context-1" data-context-key="spring" checked>
+      <label class="contextLabel" for="context-1" data-context-key="spring">Spring</label>
+      <section class="tab"><p>Spring context: bind with <code>@RequestParam</code> and validate.</p></section>
+      <input type="radio" class="contextualTab" name="ctx" id="context-2" data-context-key="others">
+      <label class="contextLabel" for="context-2" data-context-key="others">Others</label>
+      <section class="tab"><p>Other frameworks: follow their escaping rules.</p></section>
+    </section>
+  </section>
+  <input type="radio" name="tabs" id="tab-2"><label class="tabLabel" for="tab-2">More info</label>
+  <section class="tab"><ul><li><a href="https://owasp.org/Top10/A03_2021-Injection/">OWASP Top 10 A03</a></li></ul></section>
+</div>
+<h6>Heading six</h6><h5>Heading five</h5><h4>Heading four</h4>

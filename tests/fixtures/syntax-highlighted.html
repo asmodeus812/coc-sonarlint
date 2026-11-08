@@ -1,0 +1,18 @@
+<p>The following code is vulnerable to Session Cookie Injection as it assigns a session cookie using untrusted data.</p>
+<h4>Noncompliant code example</h4>
+<pre data-diff-id="1" data-diff-type="noncompliant">
+<span class="hljs-keyword">void</span> <span class="hljs-title function_">doGet</span><span class="hljs-params">(HttpServletRequest request, HttpServletResponse response)</span>
+</pre>
+<h4>Compliant solution</h4>
+<pre data-diff-id="1" data-diff-type="compliant">
+  <span class="hljs-keyword">void</span> <span class="hljs-title function_">doGet</span><span class="hljs-params">(HttpServletRequest request, HttpServletResponse response)</span> <span class="hljs-keyword">throws</span> IOException
+</pre>
+<pre data-diff-id="2" data-diff-type="noncompliant">
+<span class="hljs-keyword">void</span> <span class="hljs-title function_">doGet</span><span class="hljs-params">(HttpServletRequest request, HttpServletResponse response)</span>
+</pre>
+<pre>
+  <span class="hljs-keyword">void</span> <span class="hljs-title function_">doGet</span><span class="hljs-params">(HttpServletRequest request, HttpServletResponse response)</span> <span class="hljs-keyword">throws</span> IOException
+</pre>
+<h3>How does this work?</h3>
+<p>Untrusted data, such as GET or POST request content</p>
+<p>Session cookies should be generated using the built-in APIs</p>
