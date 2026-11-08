@@ -7,7 +7,12 @@ PHP, HTML, CSS, YAML/JSON (CloudFormation, Kubernetes, Azure Resource Manager), 
 file. With Connected Mode it uses the rule sets and project settings of a SonarQube Server or
 SonarQube Cloud project.
 
-Using it inside Neovim (commands, diagnostics, code actions, rule descriptions, findings,
+Rule descriptions, hotspot details and connection details open as styled, syntax-highlighted
+text in a reusable split or floating window, rendered like a browser would: the same stylesheets as in
+VS Code, tabs and framework selectors you can toggle with `<CR>`, links that show their address, all
+linked to your colorscheme.
+
+Using it inside Neovim (commands, diagnostics, code actions, description views, findings,
 hotspots) is described in `:help coc-sonarlint`, available once the extension is active. This
 README covers requirements, installation, setup, settings and troubleshooting.
 
@@ -27,6 +32,14 @@ README covers requirements, installation, setup, settings and troubleshooting.
 
 The language server and the analyzers ship with the extension. The extension starts when you open a file of a supported language or a
 workspace that contains a `.sonar.properties` file (see `:help coc-sonarlint-start`).
+
+Rule, hotspot and connection descriptions render like a browser page when the optional
+[coc-htmlview](https://github.com/asmodeus812/coc-htmlview) extension is installed (recommended); without it they open as
+plain text in a floating window:
+
+```vim
+:CocInstall https://github.com/asmodeus812/coc-htmlview
+```
 
 ## Setup
 
@@ -170,6 +183,7 @@ Settings go in `coc-settings.json` (`:CocConfig`, or `:CocLocalConfig` for the w
 | `sonarlint.disableTelemetry` | boolean | `false` | Disable sending anonymous usage statistics to SonarSource. |
 | `sonarlint.focusOnNewCode` | boolean | `false` | If enabled, by default, focusing on new code shows issues introduced in the last 30 days. |
 | `sonarlint.startFlightRecorder` | boolean | `false` | Start the language server's flight recorder mode. |
+| `sonarlint.view.stylesheets` | array | `[]` | Extra CSS files passed to coc-htmlview after the bundled stylesheets of every description view (only inline `style` attributes come later); `~` and environment variables are expanded. |
 
 ## Troubleshooting
 

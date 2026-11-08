@@ -55,8 +55,8 @@ Deactivating writes the rule to `sonarlint.rules` in your settings.
 ==============================================================================
 RULE DESCRIPTIONS                                        *coc-sonarlint-rules*
 
-Rule descriptions open in a floating window, rendered as text. Open one from
-a code action, from the rules tree, or by key with
+Rule descriptions open in the rule view, see |coc-sonarlint-views|. Open one
+from a code action, from the rules tree, or by key with
 |coc-sonarlint-SonarLint.OpenRuleByKey|, which accepts a rule key such as
 `java:S1234` or a language.
 
@@ -84,8 +84,9 @@ SECURITY HOTSPOTS                                     *coc-sonarlint-hotspots*
 
 Security hotspots need Connected Mode. Hotspots of open files are reported
 with the issues; |coc-sonarlint-SonarLint.ScanForHotspotsInFolder| scans a
-whole folder. Hotspot details and rule descriptions open in a floating
-window, and the status of a hotspot can be changed when the server allows it.
+whole folder. Hotspot details open in the hotspot view, see
+|coc-sonarlint-views|, and the status of a hotspot can be changed when the
+server allows it.
 
 ==============================================================================
 CONNECTED MODE                                  *coc-sonarlint-connected-mode*
@@ -95,7 +96,134 @@ Connections and bindings are set up in the settings, see the README.
 |coc-sonarlint-SonarLint.AutoBindWorkspaceFolders| binds the workspace
 folders to matching remote projects, and
 |coc-sonarlint-SonarLint.ShareConnectedModeConfiguration| writes the binding
-to a file that can be committed for the team.
+to a file that can be committed for the team. The details of a connection
+in the tree open in the connection view, see |coc-sonarlint-views|.
+
+==============================================================================
+DESCRIPTION VIEWS                                        *coc-sonarlint-views*
+
+Rule descriptions, hotspot details and connection details are shown as
+styled text in a scratch buffer, one per kind: `sonarlint://rule`,
+`sonarlint://hotspot` and `sonarlint://connection`. The Connect commands
+show a read-only preview of their form in `sonarlint://connection-setup`.
+Opening another rule replaces the content of the rule buffer, reuses its
+window when it is visible and moves the focus into it. The buffer is
+read-only and not listed, and its 'filetype' is `htmlview`.
+
+The statusline (or the float title) names the rule key and the rule name
+for a rule, the rule key and the message for a hotspot, and "Connection"
+plus the connection id (or the server product name in the form preview)
+for the connection views.
+
+The views render the description the way a browser would: HTML and CSS
+decide how it looks. Headings, emphasis, inline code, code blocks, lists,
+block quotes, rules, tables with borders, definition lists, banners and the
+colored capsules of a rule all keep their shape, and boxes are drawn with
+border characters. The text is laid out for the width of the window and
+laid out again when the window is resized. Code blocks keep their lines and
+are never wrapped.
+
+Description tabs work like tabs in a browser: only the selected tab is
+shown. Where a rule explains the fix for several frameworks, a bar of their
+names sits above the fix and only the selected one is shown, highlighted in
+the bar: >
+    Servlet  JSP  Spring
+<
+Select a tab or a framework with <CR>, see |coc-sonarlint-view-keys|.
+
+The address of a link is shown after its text, as ` 🔗 url`. In Neovim it is
+virtual text: it is not part of the buffer, so it is not yanked or searched.
+In Vim it is ordinary buffer text.
+
+Settings ~
+The window of the view (split or float, the split command) is set with the
+`htmlview.view.mode` and `htmlview.view.splitCommand` settings of the optional
+coc-htmlview extension. Without it descriptions open in a simple floating
+window.
+
+                                           *coc-sonarlint-view-stylesheets*
+sonarlint.view.stylesheets    Default `[]`.
+    A list of CSS files passed to coc-htmlview after the bundled stylesheets
+    of every view, so their rules win. Only `style` attributes in the HTML come later.
+    `~` and environment variables are expanded, and a relative path is
+    taken from the workspace root. A file that cannot be read is skipped
+    and named in the SonarLint output. See |coc-sonarlint-view-styles|.
+
+Keys ~
+                                                  *coc-sonarlint-view-keys*
+These keys are mapped in the view buffer (Normal mode):
+
+    q           Close the view.
+    <CR>        Follow the link under the cursor: open a URL, jump to a
+                section, or select the tab or framework under the cursor.
+    gx          Open the URL under the cursor in the browser.
+    <Tab>       Move to the next link.
+    <S-Tab>     Move to the previous link.
+    ]]          Jump to the next heading.
+    [[          Jump to the previous heading.
+    ]c          Select the next framework of the fix under (or above) the
+                cursor.
+    [c          Select the previous framework.
+
+Styles and highlight groups ~
+                                                *coc-sonarlint-view-styles*
+The cascade is the one of a browser. Rules come from, in order: a built-in
+default stylesheet (what a browser does for headings, lists, tables and so
+on, adapted to the terminal), the stylesheets SonarLint uses in VS Code,
+bundled with the extension, a small sheet of ours that draws their tabs as
+a tab bar instead of boxes, drops padding that would become blank lines and
+draws the boxes in the tabs and the capsules with a faint line, your own
+list, see |coc-sonarlint-view-stylesheets|, and finally `style` attributes
+in the HTML. Later sources win, `!important` and the specificity of selectors
+count as usual, and properties are inherited.
+
+Their theme follows 'background' (light or dark). It is updated when the
+|ColorScheme| event fires and when 'background' is set.
+
+Every style becomes a highlight group named `HtmlView` plus the words of
+its CSS class or selector, for example `HtmlViewH1`,
+`HtmlViewImpactHigh`, `HtmlViewCodeAdded` or `HtmlViewHljsKeyword`.
+The colors of the stylesheets come from groups named after VS Code's theme
+colors, for example `HtmlViewVscodeTextLinkForeground`. Each of them is
+linked to a role group, `HtmlViewHost` plus the role, which in turn is
+linked to a standard group of your colorscheme, so the views follow it:
+
+    Borders, rules, boxes   |hl-FloatBorder|
+    Headings                `@markup.heading.1` to `.6`, else `Title`
+    Links                   `@markup.link` (else `Underlined`); the
+                            ` 🔗 url` text uses `@markup.link.url`
+    Inline code, `kbd`      `@markup.raw`
+    Bold, italic            `@markup.strong`, `@markup.italic`
+    Block quotes, muted     `@markup.quote`, |hl-Comment|
+    List markers            `@markup.list`
+    Added, removed code     |hl-DiffAdd|, |hl-DiffDelete|
+    Passed, failed, warn    `DiagnosticOk`, `DiagnosticError`,
+                            `DiagnosticWarn`, `DiagnosticInfo`
+
+Roles whose first group is not defined by your colorscheme fall back to the
+next one, for example `@markup.heading` and then `Title`.
+
+All of them are defined as defaults: a group you define yourself wins. Since
+|:colorscheme| clears highlights, define overrides in a |ColorScheme|
+autocommand: >
+    autocmd ColorScheme * hi HtmlViewH1 gui=bold guifg=#e0af68
+          \ | hi link HtmlViewHostLink Function
+<
+Use :filter /HtmlView/ highlight to list the groups. For larger changes,
+add your own CSS with |coc-sonarlint-view-stylesheets|: it can use the class
+names of the bundled stylesheets and the `--vscode-*` variables.
+
+Code highlighting ~
+                                             *coc-sonarlint-view-code*
+Code blocks are highlighted with the language of the rule. In Neovim each
+block uses its treesitter parser when one is installed for the language,
+with your colorscheme's treesitter colors. Blocks without a parser, and
+every block in Vim, are highlighted with the bundled highlight.js grammars
+instead, through the `HtmlViewHljs*` groups. In compliant and noncompliant
+examples the changed lines are marked with a |hl-DiffAdd| or |hl-DiffDelete|
+background under the syntax colors.
+
+In Vim the views show the same text and colors with simpler highlighting.
 
 ==============================================================================
 LOGS                                                      *coc-sonarlint-logs*
