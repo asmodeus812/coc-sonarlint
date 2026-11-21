@@ -409,7 +409,7 @@ class Builder {
         const cell = (c: DomElement): TableCell => {
             const header = c.tag === "th";
             const span = Math.max(1, Math.min(1000, parseIntAttr(c.attrs["colspan"]) ?? 1));
-            return { span, header, children: this.flow(c.children, header ? this.withGroup(cellCtx, Groups.title) : cellCtx) };
+            return { span, header, children: this.own(c, header ? this.withGroup(cellCtx, Groups.title) : cellCtx) };
         };
         const row = (tr: DomElement, header: boolean): void => {
             const cells: TableCell[] = [];
@@ -440,7 +440,7 @@ class Builder {
                     open = undefined;
                     section(c.children, c.tag === "thead");
                 } else if (c.kind === "element" && c.tag === "caption") {
-                    captions.push(this.flow(c.children, ctx));
+                    captions.push(this.own(c, ctx));
                 } else {
                     stray.push(c);
                 }
@@ -466,13 +466,14 @@ class Builder {
             });
             return { kind: "inline", pre: false, items };
         });
-        const panels: Box[][] = group.tabs.map((t): Box[] => this.panel(t.panel, ctx));
+        const panels: Box[][] = group.tabs.map((t): Box[] => this.own(t.panel, ctx));
         return { kind: "tabs", mt: 0, mb: 0, anchors: [], group: group.id, checked: group.checked, titles, panels };
     }
 
-    private panel(panel: DomElement, ctx: Context): Box[] {
+    /** The boxes of one element (a tab panel, a caption), its own anchors included. */
+    private own(el: DomElement, ctx: Context): Box[] {
         const acc: Acc = { out: [], cur: undefined };
-        this.element(panel, ctx, acc);
+        this.element(el, ctx, acc);
         return acc.out;
     }
 }

@@ -81,6 +81,8 @@ interface Ctx {
     split: boolean;
     /** Nesting of tab bars (0 = top level). */
     tabDepth: number;
+    /** Laid out table cells by width and split (a cell is measured several times; nested tables would be exponential). */
+    cells: Map<TableCell, Map<string, Frag>>;
 }
 
 const UNBOUNDED = 1 << 20;
@@ -161,6 +163,17 @@ function stack(frags: Frag[]): Frag {
     return out;
 }
 
+/** Appends the lines of `f` to `out` behind `lead`, with its anchors. */
+function append(out: Frag, f: Frag, lead: Line = line("")): void {
+    const base = out.lines.length;
+    f.anchors.forEach((a): void => {
+        out.anchors.push({ id: a.id, line: base + a.line });
+    });
+    f.lines.forEach((l: Line): void => {
+        out.lines.push(prefixed(lead, l));
+    });
+}
+
 function withAnchors(f: Frag, ids: string[]): Frag {
     return ids.length === 0 ? f : { ...f, anchors: ids.map((id: string) => ({ id, line: 0 })).concat(f.anchors) };
 }
@@ -178,7 +191,7 @@ interface Flat {
     anchors: Array<{ pos: number; id: string }>;
 }
 
-function append(flat: Flat, text: string, style: number): void {
+function appendText(flat: Flat, text: string, style: number): void {
     flat.text += text;
     for (let i = 0; i < text.length; i++) {
         flat.styles.push(style);
@@ -229,17 +242,17 @@ function flatten(box: InlineBox, tabstop: number): Flat {
             if (!box.pre) {
                 trimEnd(flat);
             }
-            append(flat, "\n", -1);
+            appendText(flat, "\n", -1);
         } else if (box.pre) {
             const lineStart = flat.text.lastIndexOf("\n") + 1;
             const text = expandTabs(item.text.replace(/\r\n?/g, "\n"), displayWidth(flat.text.slice(lineStart)), tabstop);
-            append(flat, text, styleIndex(item.style));
+            appendText(flat, text, styleIndex(item.style));
         } else {
             let text = item.text.replace(/[ \t\n\r\f]+/g, " ");
             if (text.startsWith(" ") && (flat.text === "" || flat.text.endsWith(" ") || flat.text.endsWith("\n"))) {
                 text = text.slice(1);
             }
-            append(flat, text, styleIndex(item.style));
+            appendText(flat, text, styleIndex(item.style));
         }
     });
     if (!box.pre) {
@@ -440,10 +453,18 @@ function buildGrid(rows: TableRow[]): { rows: GridRow[]; ncols: number } {
     return { rows: grid, ncols: Math.max(1, ncols) };
 }
 
-/** A cell at `width` cells (padding 0 1 included), edge margins dropped. */
+/** A cell at `width` cells (padding 0 1 included), edge margins dropped; laid out once per width and split. */
 function cellFrag(cell: TableCell, width: number, ctx: Ctx, split: boolean): Frag {
-    const inner = layoutFlow(cell.children, Math.max(1, width - 2), { ...ctx, split });
-    return { ...mapLines(inner, (l: Line): Line => prefixed(line(" "), l)), mt: 0, mb: 0 };
+    const key = `${width}:${split}`;
+    const byKey = ctx.cells.get(cell) ?? new Map<string, Frag>();
+    ctx.cells.set(cell, byKey);
+    let f = byKey.get(key);
+    if (f === undefined) {
+        const inner = layoutFlow(cell.children, Math.max(1, width - 2), { ...ctx, split });
+        f = { ...mapLines(inner, (l: Line): Line => prefixed(line(" "), l)), mt: 0, mb: 0 };
+        byKey.set(key, f);
+    }
+    return f;
 }
 
 function distribute(mins: number[], maxs: number[], avail: number): number[] {
@@ -510,10 +531,13 @@ function fitColumns(grid: { rows: GridRow[]; ncols: number }, avail: number, ctx
     return widths;
 }
 
+/** The column boundaries where `row` draws a bar (none inside a spanning cell or past its last cell). */
 function edges(row: GridRow | undefined, ncols: number): Set<number> {
     const out: Set<number> = new Set();
     if (row !== undefined) {
-        for (let c = 1; c < ncols; c++) {
+        const last = row.cells[row.cells.length - 1];
+        const end = last !== undefined ? last.col + last.span : 0;
+        for (let c = 1; c < Math.min(ncols, end + 1); c++) {
             if (!row.cells.some((p: GridCell): boolean => p.col < c && c < p.col + p.span)) {
                 out.add(c);
             }
@@ -538,18 +562,24 @@ function borderLine(widths: readonly number[], above: GridRow | undefined, below
     return text + (above === undefined ? g[3] : below === undefined ? g[5] : g[7]);
 }
 
-function placeGrid(grid: { rows: GridRow[]; ncols: number }, widths: number[], ctx: Ctx): Line[] {
+function placeGrid(grid: { rows: GridRow[]; ncols: number }, widths: number[], ctx: Ctx): Frag {
     const total = widths.reduce((a, b) => a + b, 0) + (widths.length - 1) + 2;
     const frags = grid.rows.map((r: GridRow): Frag[] => r.cells.map((c: GridCell): Frag => cellFrag(c.cell, spanWidth(widths, c), ctx, true)));
     const heights = frags.map((fs: Frag[]): number => fs.reduce((acc: number, f: Frag): number => Math.max(acc, f.lines.length), 1));
     const tall = grid.rows.some((r: GridRow, i: number): boolean => !r.header && heights[i] > 1);
-    const out: Line[] = [faint(borderLine(widths, undefined, grid.rows[0]))];
+    const out: Frag = { ...emptyFrag(), lines: [faint(borderLine(widths, undefined, grid.rows[0]))] };
     const bar = faint(GRID[1]);
     grid.rows.forEach((r: GridRow, i: number): void => {
         const prev = i > 0 ? grid.rows[i - 1] : undefined;
         if (prev !== undefined && (prev.header !== r.header || (tall && !r.header))) {
-            out.push(faint(borderLine(widths, prev, r)));
+            out.lines.push(faint(borderLine(widths, prev, r)));
         }
+        const top = out.lines.length;
+        frags[i].forEach((f: Frag): void => {
+            f.anchors.forEach((a): void => {
+                out.anchors.push({ id: a.id, line: top + a.line });
+            });
+        });
         for (let k = 0; k < heights[i]; k++) {
             const parts: Line[] = [bar];
             r.cells.forEach((c: GridCell, j: number): void => {
@@ -558,53 +588,60 @@ function placeGrid(grid: { rows: GridRow[]; ncols: number }, widths: number[], c
             });
             const row = concat(parts);
             const used = displayWidth(row.text);
-            out.push(used < total ? concat([row, line(spaces(total - used - 1)), bar]) : row);
+            out.lines.push(used < total ? concat([row, line(spaces(total - used - 1)), bar]) : row);
         }
     });
-    out.push(faint(borderLine(widths, grid.rows[grid.rows.length - 1], undefined)));
+    out.lines.push(faint(borderLine(widths, grid.rows[grid.rows.length - 1], undefined)));
     return out;
 }
 
-function placeStacked(grid: { rows: GridRow[]; ncols: number }, width: number, ctx: Ctx): Line[] {
-    const headerRow = grid.rows.find((r: GridRow): boolean => r.header);
-    const body = grid.rows.filter((r: GridRow): boolean => !r.header);
-    const shown = body.length > 0 ? body : grid.rows;
-    const out: Line[] = [];
-    shown.forEach((r: GridRow, i: number): void => {
-        if (i > 0) {
-            out.push(faint(RULE.repeat(Math.max(1, width))));
-        }
-        r.cells.forEach((c: GridCell): void => {
-            const label = headerRow !== undefined && body.length > 0 && c.span === 1 ? headerRow.cells.find((h: GridCell): boolean => h.col === c.col) : undefined;
-            if (label !== undefined) {
-                cellFrag(label.cell, width, ctx, true).lines.forEach((l: Line): void => {
-                    out.push(l);
-                });
+/** The first header row when it can label every body cell below it in stacked mode (span 1, a body cell per column). */
+function labelRow(rows: GridRow[]): GridRow | undefined {
+    const head = rows.find((r: GridRow): boolean => r.header);
+    const body = rows.filter((r: GridRow): boolean => !r.header);
+    const labels = (h: GridCell): boolean => h.span === 1 && body.some((r: GridRow): boolean => r.cells.some((c: GridCell): boolean => c.col === h.col && c.span === 1));
+    return head !== undefined && head.cells.every(labels) ? head : undefined;
+}
+
+/** Rows one after another, ruled apart; body cells under their header label, other rows as they are. */
+function placeStacked(grid: { rows: GridRow[]; ncols: number }, width: number, ctx: Ctx): Frag {
+    const labels = labelRow(grid.rows);
+    const out: Frag = emptyFrag();
+    grid.rows
+        .filter((r: GridRow): boolean => r !== labels)
+        .forEach((r: GridRow, i: number): void => {
+            if (i > 0) {
+                out.lines.push(faint(RULE.repeat(Math.max(1, width))));
             }
-            const indent = label !== undefined ? 2 : 0;
-            cellFrag(c.cell, width - indent, ctx, true).lines.forEach((l: Line): void => {
-                out.push(prefixed(line(spaces(indent)), l));
+            r.cells.forEach((c: GridCell): void => {
+                const label = labels !== undefined && !r.header ? labels.cells.find((h: GridCell): boolean => h.col === c.col && c.span === 1) : undefined;
+                if (label !== undefined) {
+                    append(out, cellFrag(label.cell, width, ctx, true));
+                }
+                const indent = label !== undefined ? 2 : 0;
+                append(out, cellFrag(c.cell, width - indent, ctx, true), line(spaces(indent)));
             });
         });
-    });
     return out;
 }
 
+/** Captions centred over the width, then the grid (or the stacked rows when the columns do not fit). */
 function layoutTable(box: TableBox, width: number, ctx: Ctx): Frag {
-    const captions: Line[] = [];
+    const out: Frag = emptyFrag(box.mt, box.mb);
     box.captions.forEach((boxes: Box[]): void => {
-        layoutFlow(boxes, width, ctx).lines.forEach((l: Line): void => {
-            captions.push(prefixed(line(spaces(Math.floor((width - displayWidth(l.text)) / 2))), l));
+        const f = layoutFlow(boxes, width, ctx);
+        append(out, { ...f, lines: [] });
+        f.lines.forEach((l: Line): void => {
+            out.lines.push(prefixed(line(spaces(Math.floor((width - displayWidth(l.text)) / 2))), l));
         });
     });
     const grid = buildGrid(box.rows);
     const avail = width - 2 - (grid.ncols - 1);
-    let rows: Line[] = [];
     if (grid.rows.length > 0) {
         const widths = avail > 0 ? fitColumns(grid, avail, ctx) : undefined;
-        rows = widths !== undefined ? placeGrid(grid, widths, ctx) : placeStacked(grid, width, ctx);
+        append(out, widths !== undefined ? placeGrid(grid, widths, ctx) : placeStacked(grid, width, ctx));
     }
-    return withAnchors({ lines: captions.concat(rows), mt: box.mt, mb: box.mb, anchors: [] }, box.anchors);
+    return withAnchors(out, box.anchors);
 }
 
 /* ---------------------------------------------------------------- tabs */
@@ -677,7 +714,7 @@ function utf8(s: string): number {
 /** Lays out `boxes` at `opts.width`; never throws on any box tree. */
 export function layout(boxes: Box[], opts: LayoutOptions): Layout {
     const width = Math.max(1, Math.floor(opts.width));
-    const ctx: Ctx = { opts, tabstop: Math.max(1, opts.tabstop ?? 8), split: true, tabDepth: 0 };
+    const ctx: Ctx = { opts, tabstop: Math.max(1, opts.tabstop ?? 8), split: true, tabDepth: 0, cells: new Map() };
     const frag = layoutFlow(boxes, width, ctx);
     const out: Layout = { lines: [], highlights: [], links: [], tabs: [], anchors: {} };
     frag.lines.forEach((l: Line, lnum: number): void => {

@@ -150,3 +150,36 @@ test("empty, malformed and huge input", () => {
     assert.deepEqual(deep.lines, ["deep"]);
     assert.ok(Date.now() - start < 5000);
 });
+
+test("nested tables lay out in linear time", () => {
+    const html = "<table><tr><td>a</td><td>".repeat(20) + "x" + "</td></tr></table>".repeat(20);
+    const start = Date.now();
+    const out = lines(html, 2000);
+    assert.ok(out.join("\n").includes("x"));
+    assert.ok(Date.now() - start < 1000, `${Date.now() - start}ms`);
+});
+
+test("stacked tables keep every header row and unmatched header cell", () => {
+    const two = lines("<table><thead><tr><th>A</th><th>B</th></tr><tr><th>SubA</th><th>SubB</th></tr></thead><tr><td>aaaaaaaa</td><td>bbbbbbbb</td></tr></table>", 12);
+    assert.ok(["A", "B", "SubA", "SubB", "aaaaaaaa", "bbbbbbbb"].every((w) => two.some((l) => l.includes(w))), two.join("\n"));
+    const span = lines('<table><thead><tr><th>H1</th><th>H2</th></tr></thead><tr><td colspan="2">cccccccccccccc</td></tr></table>', 12);
+    assert.ok(["H1", "H2"].every((w) => span.some((l) => l.includes(w))), span.join("\n"));
+    assert.deepEqual(lines("<table><thead><tr><th>Alpha</th><th>Beta</th></tr></thead><tr><td>aaaaaaaa</td><td>bbbbbbbb</td></tr></table>", 12), [" Alpha", "   aaaaaaaa", " Beta", "   bbbbbbbb"]);
+});
+
+test("table cells and captions keep their anchors", () => {
+    const r = render('<table><caption id="cap">Cap</caption><tr><td>a</td></tr><tr><td id="cell">x</td></tr></table>', 30);
+    assert.equal(r.lines[r.anchors["cell"]], "│ x │".padStart(r.lines[r.anchors["cell"]].length, " "));
+    assert.equal(r.lines[r.anchors["cap"]].trim(), "Cap");
+    const narrow = render('<table><thead><tr><th>Alpha</th></tr></thead><tr><td id="c">aaaaaaaaaaaa</td></tr></table>', 8);
+    assert.match(narrow.lines[narrow.anchors["c"]], /aaaa/);
+});
+
+test("a short row's border has no junction where the row draws no bar", () => {
+    assert.deepEqual(lines("<table><tr><td>a</td><td>b</td><td>c</td></tr><tr><td>d</td></tr></table>"), [
+        "┌───┬───┬───┐",
+        "│ a │ b │ c │",
+        "│ d │       │",
+        "└───┴───────┘",
+    ]);
+});
