@@ -9,17 +9,18 @@ const fixture = (n: string) => readFileSync(join(dir, n + ".html"), "utf8");
 const render = (html: string, width = 60) => renderSimple(html, { width });
 
 test("headings, lists and pre", () => {
-    const r = render("<h2>Why</h2><p>text</p><ul><li>a<ul><li>b</li></ul></li><li>c</li></ul><ol><li>x</li><li>y</li></ol><pre>\nif (a) {\n  b;\n}\n</pre>");
-    assert.deepEqual(r.lines, ["## Why", "", "text", "", "• a", "  • b", "• c", "", "1. x", "2. y", "", "  if (a) {", "    b;", "  }"]);
+    const r = render("<h2>Why</h2><p>text</p><ul><li>a<ul><li>b</li></ul></li><li>c</li></ul><ol><li>x</li><li>y</li></ol><pre>\nif (a) {\n  b;\n}\n</pre>", 20);
+    assert.deepEqual(r.lines, ["◆ Why", "", "text", "", " • a", "    ◦ b", " • c", "", "1. x", "2. y", "", "┌──────────────────┐", "│ if (a) {         │", "│   b;             │", "│ }                │", "└──────────────────┘"]);
     assert.ok(r.highlights.some((h) => h.lnum === 0 && h.hlGroup === "Title"));
-    assert.ok(r.highlights.some((h) => h.lnum === 11 && h.hlGroup === "String"));
+    assert.ok(r.highlights.some((h) => h.lnum === 11 && h.hlGroup === "Comment"));
 });
 
 test("links, inline code, table, hr, blockquote, dropped tags", () => {
     const r = render('<p>See <a href="http://x.io">docs</a> and <code>f()</code></p><table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table><hr><blockquote>q</blockquote><script>bad()</script><button>no</button>');
-    assert.equal(r.lines[0], "See docs (http://x.io) and f()");
-    assert.deepEqual(r.lines.slice(2, 4), ["A │ B", "1 │ 2"]);
-    assert.ok(r.lines.includes("│ q"));
+    assert.equal(r.lines[0], "See docs and f()");
+    assert.deepEqual(r.lines.slice(2, 6), ["┌───┬───┐", "│ A │ B │", "│ 1 │ 2 │", "└───┴───┘"]);
+    assert.ok(r.lines.includes("  │ q"));
+    assert.deepEqual(r.links.map((l) => l.href), ["http://x.io"]);
     assert.ok(!r.lines.join("\n").includes("bad"));
     assert.ok(r.highlights.some((h) => h.hlGroup === "Underlined") && r.highlights.some((h) => h.hlGroup === "Special"));
 });
