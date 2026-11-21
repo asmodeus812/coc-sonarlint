@@ -201,7 +201,7 @@ test("engine/style: paint groups, group definitions and fallback chains", () => 
     assert.deepEqual(groups.get("HtmlViewImpactHigh"), { name: "HtmlViewImpactHigh", fg: { hex: "#fda29b" }, bg: { hex: "#fda29b", alpha: 0.2 } });
     assert.deepEqual(el(t, "pc").paint, ["HtmlViewCode", "HtmlViewPreCode"]);
     assert.deepEqual(groups.get("HtmlViewPreCode")?.bg, { hex: "#000000", alpha: 0 });
-    assert.deepEqual(groups.get("HtmlViewCode")?.fg, { group: "HtmlViewVscodeTextPreformatForeground", attr: "fg", fallback: ["@markup.raw", "Special", "String"] });
+    assert.deepEqual(groups.get("HtmlViewCode")?.fg, { group: "HtmlViewVscodeTextPreformatForeground", attr: "fg", fallback: ["Special", "String"] });
     assert.deepEqual(el(t, "h").paint, ["HtmlViewH1"], "a selector list member and a later rule of the same text share one group");
     assert.deepEqual(groups.get("HtmlViewH1")?.bold, false, "rule.css h1 {font-weight: 500} is the later rule of that selector");
     assert.deepEqual(groups.get("HtmlViewHostBorder"), { name: "HtmlViewHostBorder", link: "FloatBorder", fallback: ["WinSeparator", "NonText"], only: "fg" });
