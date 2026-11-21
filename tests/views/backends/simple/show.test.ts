@@ -239,3 +239,20 @@ test("a failure never throws: one error line and a log", async () => {
     assert.deepEqual(b.lines, ["[sonarlint] cannot show the view: boom"]);
     assert.ok(logs.some((l) => l.includes("boom")));
 });
+
+test("the buffer is unlocked while its window opens (autocmds may set options) and locked once shown", async () => {
+    const nvim = new FakeNvim();
+    const atOpen: unknown[] = [];
+    const call = nvim.call.bind(nvim);
+    nvim.call = async (fn: string, args: unknown[] = []): Promise<unknown> => {
+        if (fn === "nvim_open_win") {
+            atOpen.push(nvim.bufs.find((x) => x.bufnr === args[0])?.opts["&modifiable"]);
+        }
+        return call(fn, args);
+    };
+    const { view } = setup(nvim);
+    await view.show({ name: "m", title: "M", html: "<p>one</p>" });
+    const b = nvim.bufs.find((x) => x.name === "m") as Buf;
+    assert.deepEqual(atOpen, [1], "modifiable when the float opens");
+    assert.equal(b.opts["&modifiable"], 0, "locked after the write");
+});

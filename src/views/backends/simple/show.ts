@@ -85,6 +85,8 @@ let tokens = 0;
 /** Shows built-in views and owns their buffers, keys and refresh. */
 export class SimpleView {
     private readonly views = new Map<number, ViewState>();
+    /** The last queued write per buffer (see `write`). */
+    private readonly writes = new Map<number, Promise<void>>();
     private global: Disposable[] = [];
 
     constructor(private readonly host: ViewHost) {}
@@ -158,7 +160,6 @@ export class SimpleView {
                 await nvim.call("setbufvar", [bufnr, opt, value]);
             }
             await nvim.call("bufload", [bufnr]);
-            await nvim.call("setbufvar", [bufnr, "&modifiable", 0]);
         }
         return bufnr;
     }
@@ -201,6 +202,9 @@ export class SimpleView {
     /** Focuses the view's window, opening a float (Neovim) or a right split (Vim) when it is not shown. */
     private async open(state: ViewState): Promise<void> {
         const nvim = this.host.nvim;
+        // unlocked while its window opens or is entered: the user's BufEnter/BufWinEnter/WinEnter autocmds may set
+        // buffer options such as 'fileformat', which raises E21 on a locked buffer; the following write locks it again
+        await nvim.call("setbufvar", [state.bufnr, "&modifiable", 1]);
         const shown = await this.winid(state);
         let winid = shown;
         if (shown !== -1) {
@@ -247,7 +251,18 @@ export class SimpleView {
         }
     }
 
-    private async write(bufnr: number, r: Pick<Rendered, "lines" | "highlights">): Promise<void> {
+    /**
+     * Replaces the buffer's lines and highlights. Writes are queued per buffer, so a refresh (the window opening fires
+     * one) cannot lock the buffer again between another write's unlock and its edit.
+     */
+    private write(bufnr: number, r: Pick<Rendered, "lines" | "highlights">): Promise<void> {
+        const previous: Promise<void> = this.writes.get(bufnr) ?? Promise.resolve();
+        const next: Promise<void> = previous.catch(() => undefined).then(() => this.writeNow(bufnr, r));
+        this.writes.set(bufnr, next);
+        return next;
+    }
+
+    private async writeNow(bufnr: number, r: Pick<Rendered, "lines" | "highlights">): Promise<void> {
         const nvim = this.host.nvim;
         await nvim.call("setbufvar", [bufnr, "&modifiable", 1]);
         await nvim.call("deletebufline", [bufnr, 1, "$"]);
