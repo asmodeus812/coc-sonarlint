@@ -34,8 +34,10 @@ The language server and the analyzers ship with the extension. The extension sta
 workspace that contains a `.sonar.properties` file (see `:help coc-sonarlint-start`).
 
 Rule, hotspot and connection descriptions render like a browser page when the optional
-[coc-htmlview](https://github.com/asmodeus812/coc-htmlview) extension is installed (recommended); without it they open as
-plain text in a floating window:
+[coc-htmlview](https://github.com/asmodeus812/coc-htmlview) extension is installed (recommended); without it they open in a built-in renderer that works in
+Vim and Neovim: a scratch buffer in a float (Neovim) or split (Vim) laid out like a browser with its
+default styles, with switchable tabs (`<CR>`, `]c`/`[c`), links (`<CR>`/`gx`, `<Tab>`) and `q` to close,
+but without the stylesheets, capsules and code syntax colors (see `:help coc-sonarlint-view-builtin`):
 
 ```vim
 :CocInstall https://github.com/asmodeus812/coc-htmlview

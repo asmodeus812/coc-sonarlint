@@ -138,8 +138,8 @@ In Vim it is ordinary buffer text.
 Settings ~
 The window of the view (split or float, the split command) is set with the
 `htmlview.view.mode` and `htmlview.view.splitCommand` settings of the optional
-coc-htmlview extension. Without it descriptions open in a simple floating
-window.
+coc-htmlview extension. Without it descriptions open in the built-in
+renderer, see |coc-sonarlint-view-builtin|.
 
                                            *coc-sonarlint-view-stylesheets*
 sonarlint.view.stylesheets    Default `[]`.
@@ -225,6 +225,43 @@ examples the changed lines are marked with a |hl-DiffAdd| or |hl-DiffDelete|
 background under the syntax colors.
 
 In Vim the views show the same text and colors with simpler highlighting.
+
+Built-in renderer ~
+                                               *coc-sonarlint-view-builtin*
+Without coc-htmlview the views open in a smaller built-in renderer, in Vim
+and in Neovim. It lays the description out like a browser with its default
+styles: headings, paragraphs, lists, block quotes, rules, definition lists,
+code blocks in a faint box, and tables drawn with border characters that
+shrink and wrap to fit, or stack their rows when the window is too narrow.
+Text wraps to the window width and is laid out again when the width or
+'tabstop' changes. Nothing the page shows is dropped: image texts appear as
+`[text]` and closed details are shown open.
+
+It uses a scratch buffer named like the view (`sonarlint://rule`, ...),
+reused for the next description of the same kind. In Neovim it opens in a
+float with the title in its border; in Vim in a `botright vsplit` with the
+title in the statusline. Description tabs and frameworks work as above: a
+bar of titles with the selected one boxed, and only its content below.
+
+Its keys, in the view buffer (Normal mode):
+
+    q           Close the window.
+    <CR>        Select the tab under the cursor, else follow the link.
+    gx          Follow the link under the cursor.
+    ]c  [c      Select the next or previous tab of the bar under (or
+                nearest) the cursor, wrapping around.
+    <Tab>       Move to the next link.
+    <S-Tab>     Move to the previous link.
+
+A link with an address opens through coc (the browser for http and https),
+and a `#section` link jumps to its line. Link addresses are not shown.
+Colors use standard groups: |hl-Title| for headings and the selected tab,
+|hl-Underlined| for links, |hl-Special| for inline code, |hl-Comment| for
+boxes and borders, |hl-DiffAdd| and |hl-DiffDelete| for changed code, plus
+`SonarLintSimpleBold`, `SonarLintSimpleItalic` and `SonarLintSimpleStrike`
+(defined with `:hi default`, so your own definitions win). There are no
+stylesheets, capsules or code syntax colors: install coc-htmlview for the
+full styling.
 
 ==============================================================================
 LOGS                                                      *coc-sonarlint-logs*
