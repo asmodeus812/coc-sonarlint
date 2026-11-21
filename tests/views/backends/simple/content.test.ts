@@ -59,3 +59,8 @@ test("no content lost in inline cases", () => {
     check("<ul><li>one<ul><li>two</li></ul></li></ul><dl><dt>t</dt><dd>d</dd></dl><blockquote>q</blockquote>", 80);
     check("<p>日本語 é 🚀 end</p><pre>  keep\n\tx</pre>", 80);
 });
+
+test("no content lost in tab titles holding blocks", () => {
+    const tab = (id: string, label: string): string => `<input type="radio" name="g" id="${id}"><label for="${id}">${label}</label><div>panel ${id}</div>`;
+    check(tab("a", "One<ul><li>listed</li></ul>") + tab("b", "Two<table><tr><td>celled</td></tr></table>"), 80);
+});

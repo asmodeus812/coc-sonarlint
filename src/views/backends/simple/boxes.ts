@@ -478,15 +478,30 @@ class Builder {
     }
 }
 
+/** The boxes directly inside `box`, in reading order. */
+function childBoxes(box: Box): Box[] {
+    let out: Box[] = [];
+    if (box.kind === "block" || box.kind === "pre") {
+        out = box.children;
+    } else if (box.kind === "list") {
+        out = ([] as Box[]).concat(...box.items.map((it: ListItem): Box[] => it.children));
+    } else if (box.kind === "table") {
+        out = ([] as Box[]).concat(...box.captions, ...box.rows.map((r: TableRow): Box[] => ([] as Box[]).concat(...r.cells.map((c: TableCell): Box[] => c.children))));
+    } else if (box.kind === "tabs") {
+        out = ([] as Box[]).concat(...box.titles.map((t: InlineBox, i: number): Box[] => [t as Box].concat(box.panels[i])));
+    }
+    return out;
+}
+
 /** The inline items of a box tree, blocks joined by spaces (a tab title is one line). */
 function collectInline(box: Box, out: Inline[]): void {
     if (box.kind === "inline") {
         box.items.forEach((i: Inline): void => {
             out.push(i.kind === "br" ? { kind: "text", text: " ", style: { groups: [] } } : i);
         });
-    } else if (box.kind === "block" || box.kind === "pre") {
+    } else {
         out.push({ kind: "text", text: " ", style: { groups: [] } });
-        box.children.forEach((b: Box): void => collectInline(b, out));
+        childBoxes(box).forEach((b: Box): void => collectInline(b, out));
     }
 }
 
