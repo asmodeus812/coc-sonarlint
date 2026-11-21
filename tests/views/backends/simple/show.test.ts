@@ -74,7 +74,8 @@ class FakeNvim {
         } else if (fn === "setbufvar" && b) {
             b.opts[args[1] as string] = args[2];
         } else if (fn === "setbufline" && b) {
-            b.lines = args[2] as string[];
+            // like Vim: setting no lines into an emptied buffer leaves its one empty line
+            b.lines = (args[2] as string[]).length > 0 ? (args[2] as string[]) : [""];
         } else if (fn === "deletebufline" && b) {
             b.lines = [""];
         } else if (fn === "coc#highlight#set" && b) {
@@ -308,6 +309,12 @@ test("two shows at once set the buffer up once", async () => {
     assert.deepEqual(ctx.nvim.bufs.filter((x) => x.name.startsWith("c")).map((x) => x.name), ["c"]);
     assert.equal(ctx.autocmds.filter((a) => a.event === "BufWinEnter" && a.buffer === b.bufnr).length, 1);
     assert.deepEqual(b.lines, ["b"]);
+});
+
+test("an empty page leaves one empty line", async () => {
+    const ctx = setup();
+    await ctx.view.show({ name: "z", title: "Z", html: "" });
+    assert.deepEqual((ctx.nvim.bufs.find((x) => x.name === "z") as Buf).lines, [""]);
 });
 
 test("a #fragment that is not valid percent-encoding still jumps", async () => {
