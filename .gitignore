@@ -1,15 +1,26 @@
-lib
-.cache
+# Dependencies and build output
+node_modules/
+lib/
+!/language-server/lib/
 *.map
-coverage
-__pycache__
-.pyc
-.log
-build
+*.vsix
+
+# Local caches, logs and generated files
+.cache/
+coverage/
+scratch/
 doc/tags
-typings/package.json
-node_modules
-publish.sh
-release.sh
-!src/__tests__/tags
-src/__tests__/extensions/db.json
+*.log
+.DS_Store
+
+# Java build output of test projects
+target/
+bin/
+out/
+build/
+dist/
+.gradle/
+.settings/
+.classpath
+.project
+.checkstyle
