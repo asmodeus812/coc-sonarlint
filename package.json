@@ -17,7 +17,8 @@
     "scripts": {
         "watch": "node esbuild.mjs --watch",
         "build": "node esbuild.mjs",
-        "prepare": "node esbuild.mjs"
+        "prepare": "node esbuild.mjs",
+        "test": "node scripts/test.mjs"
     },
     "dependencies": {
         "diff": "^8.0.2",

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>htmlview rich demo</title>
+<style>
+:root { --accent: #c678dd; --ok: #98c379; --warn: #e5c07b; --bad: #e06c75; --muted: #7f848e; --card: rgba(97, 175, 239, 0.12); }
+body.vscode-light { --accent: #a626a4; --ok: #50a14f; --warn: #c18401; --bad: #e45649; --muted: #696c77; }
+h1 { color: var(--accent); text-align: center; }
+h2 { border-bottom: 1px solid var(--muted); padding-bottom: 2px; }
+.lead { color: var(--muted); font-style: italic; text-align: center; }
+.note { border-left: 3px solid var(--warn); padding-left: 8px; margin: 8px 0; }
+.note::before { content: "⚠ Note: "; color: var(--warn); font-weight: bold; }
+.ok { color: var(--ok); } .bad { color: var(--bad); } .muted { color: var(--muted); }
+.badge { display: inline-block; border: 1px solid var(--accent); padding: 0 6px; color: var(--accent); }
+.hidden { display: none; }
+.cards { display: flex; flex-wrap: wrap; gap: 8px; }
+.card { border: 1px solid var(--muted); padding: 4px 8px; background: var(--card); }
+.card h4 { margin: 0; color: var(--accent); }
+ol.roman { list-style-type: upper-roman; }
+ol.alpha { list-style-type: lower-alpha; }
+ul.square { list-style-type: square; }
+ul.checks { list-style: none; }
+ul.checks li::before { content: "✔ "; color: var(--ok); }
+ul.checks li.no::before { content: "✘ "; color: var(--bad); }
+ol.steps { counter-reset: step; list-style: none; }
+ol.steps li { counter-increment: step; }
+ol.steps li::before { content: "Step " counter(step) ": "; font-weight: bold; color: var(--accent); }
+table.data { border-collapse: collapse; }
+table.data th, table.data td { border: 1px solid var(--muted); padding: 0 6px; }
+table.data thead th { color: var(--accent); }
+table.data td.num { text-align: right; }
+table.data tbody tr:nth-child(even) { background: var(--card); }
+table.data tfoot td { font-weight: bold; }
+.pre-wrap { white-space: pre-wrap; }
+.nowrap { white-space: nowrap; }
+.right { text-align: right; }
+.boxed { border: 2px solid var(--accent); padding: 4px 8px; margin: 8px 0; }
+.tabs input { display: none; }
+.tabs label { border: 1px solid var(--muted); padding: 0 6px; }
+.tabs input:checked + label { color: var(--accent); font-weight: bold; }
+.tabs .panel { display: none; border-top: 1px solid var(--muted); }
+#t-a:checked ~ .p-a, #t-b:checked ~ .p-b, #t-c:checked ~ .p-c { display: block; }
+abbr { text-decoration: underline dotted; }
+q::before { content: "“"; } q::after { content: "”"; }
+</style>
+</head>
+<body>
+<h1>htmlview rich demo</h1>
+<p class="lead">A generic page, not SonarLint content: its own stylesheet, CSS variables, inline styles and interactivity.</p>
+
+<h2 id="type">Typography</h2>
+<p>Text with <strong>strong</strong>, <em>em</em>, <b>bold</b>, <i>italic</i>, <u>underline</u>, <s>strike</s>, <del>deleted</del>
+and <ins>inserted</ins> text, <mark>marked</mark>, <small>small print</small>, <abbr title="HyperText Markup Language">HTML</abbr>,
+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>, <code>inline code</code>, H<sub>2</sub>O, E = mc<sup>2</sup>, and a
+<q>short inline quotation</q>. Inline styles: <span style="color: #e06c75">red</span>, <span style="color: rgb(152,195,121); font-weight: bold">bold green</span>,
+<span style="background: rgba(229,192,123,0.35)">translucent highlight</span>, <span style="text-decoration: line-through; color: #7f848e">struck grey</span>.
+Entities &amp; symbols: &laquo;quotes&raquo; &hellip; &rarr; &larr; &uarr; &darr; &times; &divide; &plusmn; &le; &ge; &ne; &infin; &deg; &euro; &pound; &copy; &reg; &trade; &sect;.
+Wide characters: 中文字符, 日本語, 한국어, emoji 🎉🚀🔥👍, and a URL-like long word https://example.com/a/very/long/path/that/does/not/break/naturally/at/all.</p>
+<p class="right">Right-aligned paragraph.</p>
+<p class="nowrap muted">This line is white-space: nowrap and will not wrap even when the window is narrow, it just keeps going and going.</p>
+<p class="pre-wrap">pre-wrap keeps    multiple   spaces
+and line breaks
+    and indentation, but still wraps long lines when they exceed the available width of the window.</p>
+<div class="note">Callouts use a left border, padding and a generated prefix from ::before.</div>
+<p>Badges: <span class="badge">v2.1</span> <span class="badge">stable</span> <span class="badge">MIT</span>
+<span class="hidden">This text is display:none and must not appear.</span></p>
+
+<h2 id="lists">Lists</h2>
+<ol class="roman"><li>Roman one</li><li>Roman two<ol class="alpha"><li>alpha a</li><li>alpha b<ul class="square"><li>square bullet</li><li>another</li></ul></li></ol></li><li>Roman three</li></ol>
+<ul class="checks"><li>Generated check marks</li><li class="no">and crosses</li><li>from ::before content</li></ul>
+<ol class="steps"><li>Custom counters with counter-reset/increment</li><li>rendered through ::before</li><li>like a browser</li></ol>
+<ol start="7"><li>Seven</li><li>Eight</li></ol>
+
+<h2 id="structure">Structure</h2>
+<dl><dt>Term</dt><dd>Definition of the term.</dd><dt>Another term</dt><dd>With <a href="#tables">a link</a> to the tables section.</dd></dl>
+<blockquote><p>Outer quotation, first level.</p><blockquote><p>Nested quotation, second level.</p></blockquote></blockquote>
+<figure><pre>  /\_/\
+ ( o.o )
+  > ^ <</pre><figcaption>Figure 1: ASCII art in a figure with a caption.</figcaption></figure>
+<details open><summary>Details (open)</summary><p>Content of an open details element.</p></details>
+<div class="boxed">A boxed block with a thick border and padding, containing <em>inline</em> content that wraps inside the box when it gets long enough to reach the right border.</div>
+<div class="cards">
+  <div class="card"><h4>Fast</h4><span class="ok">● online</span></div>
+  <div class="card"><h4>Safe</h4><span class="warn" style="color: var(--warn)">● degraded</span></div>
+  <div class="card"><h4>Simple</h4><span class="bad">● offline</span></div>
+  <div class="card"><h4>Fourth card</h4><span class="muted">wraps to the next row</span></div>
+</div>
+<hr>
+
+<h2 id="tables">Tables</h2>
+<table class="data">
+  <caption>Quarterly results</caption>
+  <thead><tr><th>Region</th><th>Q1</th><th>Q2</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>North</td><td class="num">1,204</td><td class="num">1,388</td><td>Steady growth with a longer note that wraps inside its cell</td></tr>
+    <tr><td>South</td><td class="num">987</td><td class="num">1,021</td><td class="ok">On target</td></tr>
+    <tr><td>東京</td><td class="num">2,410</td><td class="num">2,595</td><td>CJK cell</td></tr>
+    <tr><td colspan="3">Spanning three columns</td><td class="bad">Missing data</td></tr>
+  </tbody>
+  <tfoot><tr><td>Total</td><td class="num">4,601</td><td class="num">5,004</td><td></td></tr></tfoot>
+</table>
+
+<h2 id="code">Code</h2>
+<pre><code class="language-ts">interface User { id: number; name: string }
+export async function load(id: number): Promise&lt;User&gt; {
+    const res = await fetch(`/api/users/${id}`); // template literal
+    return (await res.json()) as User;
+}</code></pre>
+<pre><code class="language-rust">fn main() {
+    let words: Vec&lt;&amp;str&gt; = "hello world".split(' ').collect();
+    println!("{} words", words.len());
+}</code></pre>
+<pre><code class="language-go">package main
+import "fmt"
+func main() { fmt.Println("hi", 42) }</code></pre>
+<pre><code class="language-sql">SELECT u.name, COUNT(o.id) AS orders
+FROM users u LEFT JOIN orders o ON o.user_id = u.id
+WHERE u.active = TRUE GROUP BY u.name ORDER BY orders DESC;</code></pre>
+<pre><code class="language-bash">for f in *.log; do grep -c ERROR "$f" || true; done | sort -n</code></pre>
+<pre><code class="language-json">{ "name": "htmlview", "version": "0.1.0", "tags": ["render", "nvim"], "ok": true }</code></pre>
+<pre><code class="language-yaml">server:
+  port: 8080
+  features: [render, highlight]   # a comment</code></pre>
+<pre><code class="language-lua">local M = {}
+function M.greet(name) return ("hello %s"):format(name) end
+return M</code></pre>
+
+<h2 id="tabs">Interactive tabs (CSS :checked)</h2>
+<div class="tabs">
+  <input type="radio" name="t" id="t-a" checked><label for="t-a">Overview</label>
+  <input type="radio" name="t" id="t-b"><label for="t-b">Details</label>
+  <input type="radio" name="t" id="t-c"><label for="t-c">History</label>
+  <div class="panel p-a"><p>Overview panel: shown by <code>#t-a:checked ~ .p-a</code>.</p></div>
+  <div class="panel p-b"><p>Details panel with a list:</p><ul><li>one</li><li>two</li></ul></div>
+  <div class="panel p-c"><p>History panel: <span class="muted">nothing yet</span>.</p></div>
+</div>
+<p><a href="#type">Back to the top</a> · <a href="https://developer.mozilla.org/docs/Web/CSS">MDN CSS reference</a></p>
+</body>
+</html>

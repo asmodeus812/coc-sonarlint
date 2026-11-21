@@ -1,0 +1,58 @@
+<h2>Why is this an issue?</h2>
+<p>Formatting SQL queries is simple but it can be <strong>dangerous</strong>: when the query contains user input, an attacker
+can change its meaning (see <a href="https://owasp.org/www-community/attacks/SQL_Injection">SQL injection</a>).</p>
+<h3>What is the potential impact?</h3>
+<p>Below are some real-world scenarios that illustrate some impacts of an attacker exploiting the vulnerability.</p>
+<ul>
+  <li> Data leakage:
+    <ul>
+      <li> <code>SELECT</code> statements returning other users' rows </li>
+      <li> error messages revealing the schema
+        <ol start="3">
+          <li> table names </li>
+          <li> column <em>types</em> </li>
+        </ol>
+      </li>
+    </ul>
+  </li>
+  <li> Privilege escalation through <code>UPDATE users SET role = 'admin'</code> </li>
+</ul>
+<h2>How to fix it in JDBC</h2>
+<h3>Code examples</h3>
+<h4>Noncompliant code example</h4>
+<pre data-diff-id="1" data-diff-type="noncompliant">
+String query = "SELECT * FROM users WHERE name = '" + name + "'";
+Statement stmt = connection.createStatement();
+ResultSet rs = stmt.executeQuery(query); // Noncompliant
+</pre>
+<h4>Compliant solution</h4>
+<pre data-diff-id="1" data-diff-type="compliant">
+String query = "SELECT * FROM users WHERE name = ?";
+PreparedStatement stmt = connection.prepareStatement(query);
+stmt.setString(1, name);
+ResultSet rs = stmt.executeQuery();
+</pre>
+<h3>Pitfalls</h3>
+<ul class="other-context-list">
+  <li class="do">Use <code>PreparedStatement</code> with bound parameters</li>
+  <li class="dont">Escape quotes by hand with <code>replace("'", "''")</code></li>
+</ul>
+<table>
+  <thead>
+    <tr><th>API</th><th>Safe</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Statement</code></td><td>No</td><td>String concatenation</td></tr>
+    <tr><td><code>PreparedStatement</code></td><td>Yes</td><td>Parameters are bound</td></tr>
+  </tbody>
+</table>
+<blockquote>
+  <p>Note: stored procedures are only safe when they do not build dynamic SQL.</p>
+</blockquote>
+<hr>
+<h2>Resources</h2>
+<h3>Standards</h3>
+<ul>
+  <li> OWASP - <a href="https://owasp.org/Top10/A03_2021-Injection/">Top 10 2021 Category A3 - Injection</a> </li>
+  <li> CWE - <a href="https://cwe.mitre.org/data/definitions/89">CWE-89 - SQL Injection</a> </li>
+</ul>

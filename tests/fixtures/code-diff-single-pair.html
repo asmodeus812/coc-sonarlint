@@ -1,0 +1,37 @@
+<p>The following code is vulnerable to Session Cookie Injection as it assigns a session cookie using untrusted data.</p>
+<h4>Noncompliant code example</h4>
+<pre data-diff-id="1" data-diff-type="noncompliant">
+protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    Optional&lt;Cookie&gt; cookieOpt = Arrays.stream(request.getCookies())
+                                    .filter(c -&gt; c.getName().equals("jsessionid"))
+                                    .findFirst();
+
+    if (!cookieOpt.isPresent()) {
+        String cookie = request.getParameter("cookie");
+        Cookie cookieObj = new Cookie("jsessionid", cookie);
+        response.addCookie(cookieObj);
+    }
+
+    response.sendRedirect("/welcome.jsp");
+}
+</pre>
+<h4>Compliant solution</h4>
+<pre data-diff-id="1" data-diff-type="compliant">
+protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    Optional&lt;Cookie&gt; cookieOpt = Arrays.stream(request.getCookies())
+                                    .filter(c -&gt; c.getName().equals("jsessionid"))
+                                    .findFirst();
+
+    if (!cookieOpt.isPresent()) {
+        response.sendRedirect("/getCookie.jsp");
+    } else {
+        response.sendRedirect("/welcome.jsp");
+    }
+}
+</pre>
+<h3>How does this work?</h3>
+<p>Untrusted data, such as GET or POST request content, should always be considered tainted. Therefore, an application should not blindly assign the
+value of a session cookie to untrusted data.</p>
+<p>Session cookies should be generated using the built-in APIs of secure libraries that include session management instead of developing homemade
+tools.<br> Often, these existing solutions benefit from quality maintenance in terms of features, security, or hardening, and it is usually better to
+use these solutions than to develop your own.</p>
