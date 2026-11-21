@@ -20,26 +20,24 @@
         "prepare": "node esbuild.mjs",
         "test": "node scripts/test.mjs"
     },
-    "dependencies": {
-        "diff": "^8.0.2",
-        "inly": "^5.0.1",
-        "lodash": "^4.14.194",
-        "node-html-parser": "6.1.13",
-        "openpgp": "^6.2.2",
-        "underscore": "^1.13.7"
-    },
     "devDependencies": {
         "@xmldom/xmldom": "^0.9.0",
         "coc.nvim": "^0.0.83-next.18",
         "compare-versions": "^6.1.1",
+        "diff": "^8.0.2",
         "esbuild": "^0.19.8",
         "expand-home-dir": "^0.0.3",
         "find-java-home": "^2.0.0",
         "follow-redirects": "^1.15.11",
         "fs-extra": "^11.3.2",
+        "inly": "^5.0.1",
+        "lodash": "^4.14.194",
         "luxon": "^3.7.2",
+        "node-html-parser": "6.1.13",
+        "openpgp": "^6.2.2",
         "path-exists": "4.0.0",
-        "typescript": "^5.3.3"
+        "typescript": "^5.3.3",
+        "underscore": "^1.13.7"
     },
     "activationEvents": [
         "onLanguage:c",
