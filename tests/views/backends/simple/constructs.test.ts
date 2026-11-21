@@ -183,3 +183,8 @@ test("a short row's border has no junction where the row draws no bar", () => {
         "└───┴───────┘",
     ]);
 });
+
+test("control characters are dropped so cell widths match the editor's", () => {
+    assert.deepEqual(lines("<p>a\u0001b\u0085c\u007fd</p>"), ["abcd"]);
+    assert.equal(lines("<pre>x\u001by</pre>", 12)[1], "│ xy       │");
+});

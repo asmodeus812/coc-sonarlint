@@ -224,6 +224,9 @@ function expandTabs(text: string, column: number, tabstop: number): string {
     return out;
 }
 
+/** Control characters other than white space: the editor draws them as `^X` or `<xx>`, so they are dropped. */
+const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/g;
+
 /** Inline items as one string (`\n` = forced break) with white space collapsed or kept. */
 function flatten(box: InlineBox, tabstop: number): Flat {
     const flat: Flat = { text: "", styles: [], table: [], anchors: [] };
@@ -245,10 +248,10 @@ function flatten(box: InlineBox, tabstop: number): Flat {
             appendText(flat, "\n", -1);
         } else if (box.pre) {
             const lineStart = flat.text.lastIndexOf("\n") + 1;
-            const text = expandTabs(item.text.replace(/\r\n?/g, "\n"), displayWidth(flat.text.slice(lineStart)), tabstop);
+            const text = expandTabs(item.text.replace(/\r\n?/g, "\n").replace(CONTROL, ""), displayWidth(flat.text.slice(lineStart)), tabstop);
             appendText(flat, text, styleIndex(item.style));
         } else {
-            let text = item.text.replace(/[ \t\n\r\f]+/g, " ");
+            let text = item.text.replace(/[ \t\n\r\f]+/g, " ").replace(CONTROL, "");
             if (text.startsWith(" ") && (flat.text === "" || flat.text.endsWith(" ") || flat.text.endsWith("\n"))) {
                 text = text.slice(1);
             }
