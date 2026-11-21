@@ -86,7 +86,7 @@ function before(a: number, b: number, c: number, d: number): boolean {
 }
 
 /** Float geometry centred in the editor for `height` lines. */
-export function floatConfig(columns: number, lines: number, height: number): Record<string, unknown> {
+function floatConfig(columns: number, lines: number, height: number): Record<string, unknown> {
     const width = Math.max(20, Math.min(100, columns - 8));
     const h = Math.max(1, Math.min(height, lines - 6));
     return {

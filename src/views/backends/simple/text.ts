@@ -40,7 +40,7 @@ function inRanges(cp: number, ranges: number[][]): boolean {
 }
 
 /** Cells of one code point. */
-export function cpWidth(cp: number): number {
+function cpWidth(cp: number): number {
     let w = 1;
     if (cp < 0x20 || (cp >= 0x7f && cp < 0xa0) || inRanges(cp, ZERO)) {
         w = 0;

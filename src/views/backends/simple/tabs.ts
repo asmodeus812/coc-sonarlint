@@ -16,9 +16,6 @@ export interface Tab {
 export interface TabGroup {
     /** Unique id, `${name}#${n}` in document order. */
     id: string;
-    name: string;
-    /** The element holding the group's labels. */
-    parent: DomElement;
     tabs: Tab[];
     /** Index of the initially selected tab: the last `checked` radio, else 0. */
     checked: number;
@@ -73,22 +70,17 @@ export function detectTabs(root: DomElement): TabGroup[] {
             labels.push(e);
         }
     });
-    const pending: Map<string, { name: string; parent: DomElement; tabs: Tab[]; complete: boolean }> = new Map();
-    const order: string[] = [];
-    let n = 0;
+    const found: Array<{ id: string; name: string; parent: DomElement; tabs: Tab[]; complete: boolean }> = [];
     labels.forEach((label: DomElement): void => {
         const radio = radioOf(label, byId);
         const name = radio !== undefined ? radio.attrs["name"] ?? "" : "";
-        if (radio !== undefined && name !== "" && label.parent !== undefined) {
-            const parent: DomElement = label.parent;
-            let key = order.find((k: string): boolean => pending.get(k)!.name === name && pending.get(k)!.parent === parent);
-            if (key === undefined) {
-                key = `${name}#${n}`;
-                n++;
-                order.push(key);
-                pending.set(key, { name, parent, tabs: [], complete: true });
+        const parent = label.parent;
+        if (radio !== undefined && name !== "" && parent !== undefined) {
+            let entry = found.find((g): boolean => g.name === name && g.parent === parent);
+            if (entry === undefined) {
+                entry = { id: `${name}#${found.length}`, name, parent, tabs: [], complete: true };
+                found.push(entry);
             }
-            const entry = pending.get(key)!;
             const panel = panelAfter(label);
             if (panel === undefined) {
                 entry.complete = false;
@@ -97,18 +89,16 @@ export function detectTabs(root: DomElement): TabGroup[] {
             }
         }
     });
-    return order
-        .map((id: string) => ({ id, entry: pending.get(id)! }))
-        .filter((g): boolean => g.entry.complete && g.entry.tabs.length > 0)
+    return found
+        .filter((g): boolean => g.complete && g.tabs.length > 0)
         .map((g): TabGroup => {
-            const tabs = g.entry.tabs;
             let checked = 0;
-            tabs.forEach((t: Tab, i: number): void => {
+            g.tabs.forEach((t: Tab, i: number): void => {
                 if ("checked" in t.radio.attrs) {
                     checked = i;
                 }
             });
-            return { id: g.id, name: g.entry.name, parent: g.entry.parent, tabs, checked };
+            return { id: g.id, tabs: g.tabs, checked };
         });
 }
 

@@ -4,8 +4,7 @@
  */
 import { buildBoxes } from "./boxes";
 import { Layout, layout, LayoutOptions } from "./layout";
-import { parseHtml } from "./parse";
-import type { DomElement, DomNode } from "./parse";
+import { parseHtml, textOf } from "./parse";
 import type { TabGroup } from "./tabs";
 
 /** One tab group as the view needs it: its id, titles and initial selection. */
@@ -20,20 +19,7 @@ export interface Rendered extends Layout {
 }
 
 function info(g: TabGroup): TabGroupInfo {
-    return { id: g.id, titles: g.tabs.map((t) => textTitle(t.label)), checked: g.checked };
-}
-
-function textTitle(el: DomElement): string {
-    const parts: string[] = [];
-    const walk = (n: DomNode): void => {
-        if (n.kind === "text") {
-            parts.push(n.text);
-        } else {
-            n.children.forEach(walk);
-        }
-    };
-    walk(el);
-    return parts.join("").replace(/\s+/g, " ").trim();
+    return { id: g.id, titles: g.tabs.map((t) => textOf(t.label).replace(/\s+/g, " ").trim()), checked: g.checked };
 }
 
 /** Renders `html` at `opts.width` cells; a failure renders one error line instead of throwing. */

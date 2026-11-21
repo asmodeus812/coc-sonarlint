@@ -152,6 +152,9 @@ define("u ins", { display: "inline", group: Groups.link });
 define("del s strike", { display: "inline", group: Groups.strike });
 define("mark", { display: "inline", group: Groups.mark });
 
+/** Displays that take part in the inline flow (the rest start a block). */
+const INLINE_LEVEL: Set<Display> = new Set<Display>(["inline", "control", "br", "img", "select", "none"]);
+
 const HEADING_MARKERS: Record<string, string> = { h1: "◉", h2: "◆", h3: "▸", h4: "▹", h5: "‣", h6: "•" };
 const BULLETS: string[] = ["•", "◦", "▪"];
 const BULLET_TYPES: Record<string, string> = { disc: "•", circle: "◦", square: "▪" };
@@ -171,7 +174,7 @@ interface Acc {
 }
 
 /** Defaults of a tag (unknown tags are inline). */
-export function tagDefaults(tag: string): TagDefaults {
+function tagDefaults(tag: string): TagDefaults {
     return TAGS[tag] ?? { display: "inline" };
 }
 
@@ -200,7 +203,7 @@ function alpha(n: number): string {
 }
 
 /** An ordered list number in the list's `type` (1, a, A, i, I). */
-export function olNumber(n: number, type: string): string {
+function olNumber(n: number, type: string): string {
     let out: string;
     if (n <= 0 || type === "1" || type === "") {
         out = String(n);
@@ -271,7 +274,7 @@ class Builder {
         const d = tagDefaults(el.tag);
         const id = el.attrs["id"] ?? (el.tag === "a" ? el.attrs["name"] : undefined);
         const anchors: string[] = id !== undefined && id !== "" ? [id] : [];
-        if (d.display === "inline" || d.display === "control" || d.display === "br" || d.display === "img" || d.display === "select" || d.display === "none") {
+        if (INLINE_LEVEL.has(d.display)) {
             anchors.forEach((a: string): void => this.inline(acc, ctx, { kind: "anchor", id: a }));
             this.inlineElement(el, d, ctx, acc);
         } else {

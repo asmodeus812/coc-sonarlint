@@ -1,17 +1,13 @@
 /**
  * The simple backend, used when the optional htmlview extension is not installed. The renderer lives in
  * `./simple/` (parse, boxes, layout; pure `renderSimple`) and the view in `./simple/show.ts` (a scratch buffer in a
- * float or split, browser-like tabs, links and keys, Vim and Neovim); this module re-exports them.
+ * float or split, browser-like tabs, links and keys, Vim and Neovim).
  */
 import type { ViewBackend, ViewDescription } from "./backend";
 import { SimpleView, ViewHost } from "./simple/show";
 
 export { renderSimple } from "./simple/render";
-export type { Rendered, TabGroupInfo } from "./simple/render";
-export type { Highlight as SimpleHighlight, Layout, LayoutOptions, LinkRegion, TabRegion } from "./simple/layout";
 export { displayWidth } from "./simple/text";
-export { SimpleView } from "./simple/show";
-export type { ShowRequest, ViewHost, ViewNvim } from "./simple/show";
 
 /** coc's workspace and the SonarLint output as the view's host (coc is loaded lazily). */
 async function cocHost(): Promise<ViewHost> {

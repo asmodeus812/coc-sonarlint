@@ -27,7 +27,7 @@ const DROPPED: Set<string> = new Set(["head", "script", "style", "template", "no
 /** Elements whose first line break is not content. */
 const LEADING_NEWLINE: Set<string> = new Set(["pre", "textarea", "listing"]);
 
-export const MAX_DEPTH = 200;
+const MAX_DEPTH = 200;
 
 /** Blocks that close an open `<p>`. */
 const CLOSES_P: Set<string> = new Set(["address", "article", "aside", "blockquote", "details", "dialog", "div", "dl", "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6", "header", "hgroup", "hr", "main", "menu", "nav", "ol", "p", "pre", "section", "table", "ul", "li", "dt", "dd", "tr", "td", "th", "tbody", "thead", "tfoot", "caption"]);
@@ -93,12 +93,9 @@ function convert(node: Node, parent: DomElement, depth: number): DomNode | undef
             out = undefined;
         } else if (depth >= MAX_DEPTH) {
             out = { kind: "text", text: node.text };
-        } else if (tag === "") {
-            const el: DomElement = { kind: "element", tag: "span", attrs: {}, children: [], parent };
-            fill(el, node, depth + 1);
-            out = el;
         } else {
-            const el: DomElement = { kind: "element", tag, attrs, children: [], parent };
+            // a tag-less element (the parser's own wrapper) is an anonymous span
+            const el: DomElement = { kind: "element", tag: tag === "" ? "span" : tag, attrs: tag === "" ? {} : attrs, children: [], parent };
             fill(el, node, depth + 1);
             out = el;
         }
