@@ -14,6 +14,7 @@ import { SonarLintExtendedLanguageClient } from "../lsp/client";
 import { ExtendedClient, ExtendedServer } from "../lsp/protocol";
 import { isFocusingOnNewCode } from "../settings/settings";
 import { ExtendedTreeItem } from "../util/types";
+import { StableTreeNodes } from "../util/stableTreeNodes";
 import { convertVscodeDiagnosticToLspDiagnostic, showActionQuickPick } from "../util/util";
 import { FindingsFileNode } from "./findingsFileNode";
 import { FindingsFolderNode } from "./findingsFolderNode";
@@ -55,6 +56,8 @@ export class FindingsTreeDataProvider implements coc.TreeDataProvider<FindingsTr
     readonly onDidChangeTreeData: coc.Event<FindingsTreeViewItem | undefined> = this._onDidChangeTreeData.event;
     private readonly findingsCache = new Map<string, FindingNode[]>();
     private activeFilter: FilterType = FilterType.All;
+    /** Group and file nodes, reused across refreshes (every streamed file fires one) so expanded groups stay open. */
+    private readonly nodes = new StableTreeNodes();
 
     constructor(private readonly client: SonarLintExtendedLanguageClient) {
         // NOP
@@ -170,9 +173,9 @@ export class FindingsTreeDataProvider implements coc.TreeDataProvider<FindingsTr
             if (isFocusingOnNewCode()) {
                 // If the file node has a category, return the appropriate parent
                 if (element.category === "new") {
-                    return new NewIssuesNode();
+                    return this.nodes.reuse(new NewIssuesNode());
                 } else if (element.category === "older") {
-                    return new OlderIssuesNode();
+                    return this.nodes.reuse(new OlderIssuesNode());
                 }
                 return undefined;
             }
@@ -183,7 +186,7 @@ export class FindingsTreeDataProvider implements coc.TreeDataProvider<FindingsTr
         const parentFile = rootFiles.find((file) => file.fileUri === element.fileUri);
         if (parentFile) {
             if (isFocusingOnNewCode()) {
-                return element.isOnNewCode ? new NewIssuesNode() : new OlderIssuesNode();
+                return element.isOnNewCode ? this.nodes.reuse(new NewIssuesNode()) : this.nodes.reuse(new OlderIssuesNode());
             }
             return parentFile;
         }
@@ -199,11 +202,11 @@ export class FindingsTreeDataProvider implements coc.TreeDataProvider<FindingsTr
             const items: FindingsTreeViewItem[] = [];
 
             if (newIssuesFiles.length > 0) {
-                items.push(new NewIssuesNode());
+                items.push(this.nodes.reuse(new NewIssuesNode()));
             }
 
             if (olderIssuesFiles.length > 0) {
-                items.push(new OlderIssuesNode());
+                items.push(this.nodes.reuse(new OlderIssuesNode()));
             }
 
             return items;
@@ -222,7 +225,7 @@ export class FindingsTreeDataProvider implements coc.TreeDataProvider<FindingsTr
             }
         }
 
-        return files;
+        return files.map((file) => this.nodes.reuse(file));
     }
 
     private async getOlderIssuesFiles(): Promise<FindingsFileNode[]> {
@@ -235,7 +238,7 @@ export class FindingsTreeDataProvider implements coc.TreeDataProvider<FindingsTr
             }
         }
 
-        return files;
+        return files.map((file) => this.nodes.reuse(file));
     }
 
     async getRootFiles(): Promise<FindingsFileNode[]> {
@@ -248,7 +251,7 @@ export class FindingsTreeDataProvider implements coc.TreeDataProvider<FindingsTr
             }
         }
 
-        return files;
+        return files.map((file) => this.nodes.reuse(file));
     }
 
     private async addFileNode(

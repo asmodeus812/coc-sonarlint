@@ -13,6 +13,7 @@ import { ExtendedServer } from "../lsp/protocol";
 import { getSonarLintConfiguration } from "../settings/settings";
 import { Commands } from "../util/commands";
 import { ExtendedTreeItem } from "../util/types";
+import { StableTreeNodes } from "../util/stableTreeNodes";
 
 type RuleLevel = Extract<ExtendedServer.ConfigLevel, "on" | "off">;
 
@@ -60,7 +61,8 @@ export class AllRulesTreeDataProvider implements coc.TreeDataProvider<AllRulesNo
     readonly onDidChangeTreeData: coc.Event<AllRulesNode | undefined> = this._onDidChangeTreeData.event;
     private levelFilter?: ExtendedServer.ConfigLevel;
     private allRules: ExtendedServer.RulesResponse | undefined;
-    private allNodes: { [key: string]: AllRulesNode } = {};
+    /** Language and rule nodes, reused across refreshes (a toggled rule is a settings change) so open languages stay open. */
+    private readonly nodes = new StableTreeNodes();
 
     constructor(private readonly allRulesProvider: () => coc.Thenable<ExtendedServer.RulesResponse>) {}
 
@@ -88,27 +90,12 @@ export class AllRulesTreeDataProvider implements coc.TreeDataProvider<AllRulesNo
                                 return true;
                             }
                         })
-                        .map((rule) => {
-                            const key = rule.key.toLowerCase();
-                            let node = this.allNodes[key];
-                            if (node === undefined) {
-                                node = new RuleNode(rule);
-                                this.allNodes[key] = node;
-                            }
-                            return node;
-                        });
+                        .map((rule) => this.nodes.reuse(new RuleNode(rule)));
                 } else {
                     // Roots are language nodes
                     return Object.keys(response)
                         .sort((a, b) => a.localeCompare(b))
-                        .map((language) => {
-                            let node = this.allNodes[language];
-                            if (node === undefined) {
-                                node = new LanguageNode(language);
-                                this.allNodes[language] = node;
-                            }
-                            return node;
-                        });
+                        .map((language) => this.nodes.reuse(new LanguageNode(language)));
                 }
             });
     }
@@ -125,25 +112,20 @@ export class AllRulesTreeDataProvider implements coc.TreeDataProvider<AllRulesNo
             const response = await this.getAllRules();
             return Object.keys(response)
                 .filter((k) => response[k].findIndex((r) => r.key.toUpperCase() === node.rule.key.toUpperCase()) >= 0)
-                .map((l) => new LanguageNode(l))
+                .map((l) => this.nodes.reuse(new LanguageNode(l)))
                 .pop();
         }
     }
 
     getTreeItem(node: AllRulesNode) {
-        if (node && node.id && this.allNodes[node.id]) {
-            return this.allNodes[node.id];
-        }
-        this.allNodes[node.id as string] = node;
         return node;
     }
 
     getTreeElement(id: string) {
-        return this.allNodes[id];
+        return this.nodes.get(id) as AllRulesNode;
     }
 
     refresh() {
-        this.allNodes = {};
         this._onDidChangeTreeData.fire(undefined);
     }
 

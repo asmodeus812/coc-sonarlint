@@ -9,7 +9,7 @@ import { join, relative, resolve } from 'node:path';
 // the SonarLint adapters and utilities; the integration tests (tests/integration) run against a coc-htmlview checkout
 // and are skipped unless CHECKOUT_HTMLVIEW points at one.
 const htmlview = process.env.CHECKOUT_HTMLVIEW ? resolve(process.env.CHECKOUT_HTMLVIEW) : undefined;
-const roots = ['tests/views', 'tests/rules', 'tests/hotspot', 'tests/connected'];
+const roots = ['tests/views', 'tests/rules', 'tests/hotspot', 'tests/connected', 'tests/util'];
 if (htmlview !== undefined) {
   roots.push('tests/integration');
 } else {

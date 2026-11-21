@@ -7,6 +7,7 @@
 "use strict";
 
 import * as coc from "coc.nvim";
+import { StableTreeNodes } from "../util/stableTreeNodes";
 import { DEFAULT_CONNECTION_ID } from "../commons";
 import { SonarLintExtendedLanguageClient } from "../lsp/client";
 import { ConnectionCheckResult } from "../lsp/protocol";
@@ -87,6 +88,8 @@ export type ConnectionsNode = Connection | ConnectionGroup | RemoteProject | Wor
 
 export class AllConnectionsTreeDataProvider implements coc.TreeDataProvider<ConnectionsNode> {
     private readonly _onDidChangeTreeData = new coc.Emitter<Connection | undefined>();
+    /** Groups, connections, projects and folders, reused across refreshes so collapsed or expanded nodes stay so. */
+    private readonly nodes = new StableTreeNodes();
     readonly onDidChangeTreeData: coc.Event<ConnectionsNode | undefined> = this._onDidChangeTreeData.event;
     private allConnections = { __sonarqube__: Array.from<Connection>([]), __sonarcloud__: Array.from<Connection>([]) };
 
@@ -121,7 +124,7 @@ export class AllConnectionsTreeDataProvider implements coc.TreeDataProvider<Conn
                 } catch (e) {
                     logToSonarLintOutput(`Unable to obtain connection with id ${connectionId} due to ${(e as Error).message}`);
                 }
-                return new Connection(c.connectionId as string, regionPrefix.concat(label), contextValue, status, c);
+                return this.nodes.reuse(new Connection(c.connectionId as string, regionPrefix.concat(label), contextValue, status, c));
             })
         );
 
@@ -178,7 +181,7 @@ export class AllConnectionsTreeDataProvider implements coc.TreeDataProvider<Conn
         }
         const allKeys = [...boundProjects.keys()];
         const keysToNames: any = await this.client.getRemoteProjectNamesByKeys(connectionId || DEFAULT_CONNECTION_ID, allKeys);
-        return allKeys.map((k) => new RemoteProject(connectionId, k, serverType, keysToNames[k]));
+        return allKeys.map((k) => this.nodes.reuse(new RemoteProject(connectionId, k, serverType, keysToNames[k]), `project:${connectionId}:${k}`));
     }
 
     getWorkspaceFoldersBoundTo(connectionId: string, projectKey: string, serverType: ServerType) {
@@ -190,7 +193,7 @@ export class AllConnectionsTreeDataProvider implements coc.TreeDataProvider<Conn
         if (!boundFolders) {
             return [];
         }
-        return boundFolders.map((f) => new WorkspaceFolderItem(f.folder.name, f.folder, connectionId, serverType));
+        return boundFolders.map((f) => this.nodes.reuse(new WorkspaceFolderItem(f.folder.name, f.folder, connectionId, serverType), `folder:${connectionId}:${projectKey}:${f.folder.uri}`));
     }
 
     getInitialState(): ConnectionGroup[] {
@@ -199,11 +202,11 @@ export class AllConnectionsTreeDataProvider implements coc.TreeDataProvider<Conn
         const result: ConnectionGroup[] = [];
 
         if (sqConnections.length > 0) {
-            result.push(new ConnectionGroup("__sonarqube__", "SonarQube Server", "sonarQubeGroup"));
+            result.push(this.nodes.reuse(new ConnectionGroup("__sonarqube__", "SonarQube Server", "sonarQubeGroup")));
         }
 
         if (scConnections.length > 0) {
-            result.push(new ConnectionGroup("__sonarcloud__", "SonarQube Cloud", "sonarCloudGroup"));
+            result.push(this.nodes.reuse(new ConnectionGroup("__sonarcloud__", "SonarQube Cloud", "sonarCloudGroup")));
         }
 
         return result;
