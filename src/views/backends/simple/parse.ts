@@ -123,7 +123,7 @@ function fill(el: DomElement, node: HTMLElement, depth: number): void {
 export function parseHtml(html: string): DomElement {
     const root: DomElement = { kind: "element", tag: "#root", attrs: {}, children: [], parent: undefined };
     try {
-        const doc = parse(html, { lowerCaseTagName: true, comment: false, parseNoneClosedTags: true, blockTextElements: { script: true, style: true } });
+        const doc = parse(html.replace(/<![a-z][^>]*>/gi, ""), { lowerCaseTagName: true, comment: false, parseNoneClosedTags: true, blockTextElements: { script: true, style: true } });
         fill(root, doc, 0);
         closeImplied(root);
     } catch (e) {
