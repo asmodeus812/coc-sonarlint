@@ -7,7 +7,7 @@ interface Buf { bufnr: number; name: string; lines: string[]; opts: Record<strin
 /** A small model of the editor: buffers, windows, the cursor, and a log of calls. */
 class FakeNvim {
     bufs: Buf[] = [];
-    wins = new Map<number, { bufnr: number; width: number; opts: Record<string, unknown> }>();
+    wins = new Map<number, { bufnr: number; width: number; opts: Record<string, unknown>; float?: boolean }>();
     current = 1000;
     cursor: [number, number] = [0, 0];
     columns = 120;
@@ -49,7 +49,10 @@ class FakeNvim {
         } else if (expr.startsWith("has('nvim')")) {
             out = this.nvim ? 1 : 0;
         } else if (expr.startsWith("[&columns")) {
-            out = [this.columns, 40, this.tabstop];
+            const win = /win_gettype\((-?\d+)\)/.exec(expr);
+            out = [this.columns, 40, this.tabstop, win && this.wins.get(Number(win[1]))?.float ? 1 : 0];
+        } else if (expr === "exists('##WinResized')") {
+            out = 1;
         } else if (info) {
             out = this.wins.get(Number(info[1]))?.width;
         } else if (expr.startsWith("[line('.')")) {
@@ -62,7 +65,9 @@ class FakeNvim {
         this.calls.push([fn, args]);
         let out: unknown = 0;
         const b = typeof args[0] === "number" ? this.bufs.find((x) => x.bufnr === args[0]) : undefined;
-        if (fn === "bufadd") {
+        if (fn === "bufadd" && this.bufs.some((x) => x.name === args[0])) {
+            out = this.bufs.find((x) => x.name === args[0])?.bufnr;
+        } else if (fn === "bufadd") {
             const bufnr = Math.max(...this.bufs.map((x) => x.bufnr)) + 1;
             this.bufs.push({ bufnr, name: args[0] as string, lines: [""], opts: {}, hl: [] });
             out = bufnr;
@@ -84,7 +89,7 @@ class FakeNvim {
         } else if (fn === "nvim_open_win") {
             const id = 3000 + this.wins.size;
             this.floats.push(args[2]);
-            this.wins.set(id, { bufnr: args[0] as number, width: (args[2] as { width: number }).width, opts: {} });
+            this.wins.set(id, { bufnr: args[0] as number, width: (args[2] as { width: number }).width, opts: {}, float: true });
             this.current = id;
             out = id;
         } else if (fn === "win_execute") {
@@ -142,7 +147,7 @@ test("scratch buffer: options, float with title, highlights, keys", async () => 
     assert.equal((nvim.floats[0] as { title: string }).title, " Rule S1 ");
     assert.ok(nvim.commands.some((c) => c.includes("hi default SonarLintSimpleBold")));
     assert.deepEqual(KEYS.filter((k) => !keys.has(`${b.bufnr}:${k}`)), []);
-    assert.ok(autocmds.some((a) => a.event === "VimResized") && autocmds.some((a) => a.event === "BufWipeout" && a.buffer === b.bufnr));
+    assert.ok(autocmds.some((a) => a.event === "VimResized") && autocmds.some((a) => a.event === "BufUnload" && a.buffer === b.bufnr));
 });
 
 test("reuse on the same name; a foreign buffer with the name gets a token", async () => {
@@ -233,11 +238,13 @@ test("re-layout on a width change, not without one", async () => {
 });
 
 test("a failure never throws: one error line and a log", async () => {
-    const { nvim, view, logs } = setup();
+    const { nvim, view, logs, keys } = setup();
     await view.show({ name: "e", title: "E", html: "<p>x</p>", prepass: () => { throw new Error("boom"); } });
     const b = nvim.bufs.find((x) => x.name === "e") as Buf;
     assert.deepEqual(b.lines, ["[sonarlint] cannot show the view: boom"]);
     assert.ok(logs.some((l) => l.includes("boom")));
+    assert.notEqual(nvim.winOf(b.bufnr), -1, "the error shows in the view's window");
+    assert.ok(keys.has(`${b.bufnr}:q`), "and q closes it");
 });
 
 test("the buffer is unlocked while its window opens (autocmds may set options) and locked once shown", async () => {
@@ -255,4 +262,73 @@ test("the buffer is unlocked while its window opens (autocmds may set options) a
     const b = nvim.bufs.find((x) => x.name === "m") as Buf;
     assert.deepEqual(atOpen, [1], "modifiable when the float opens");
     assert.equal(b.opts["&modifiable"], 0, "locked after the write");
+});
+
+/** What `:bdelete` does to an unlisted buffer: options and mappings cleared, then BufUnload. */
+async function bdelete(ctx: ReturnType<typeof setup>, b: Buf): Promise<void> {
+    b.opts = {};
+    b.lines = [""];
+    [...ctx.keys.keys()].filter((k) => k.startsWith(`${b.bufnr}:`)).forEach((k) => ctx.keys.delete(k));
+    ctx.nvim.wins.forEach((w, id) => w.bufnr === b.bufnr && ctx.nvim.wins.delete(id));
+    for (const a of ctx.autocmds.filter((x) => x.event === "BufUnload" && x.buffer === b.bufnr)) {
+        await a.callback();
+    }
+}
+
+test(":bdelete then show again: the same buffer with its options, keys and lines back", async () => {
+    const ctx = setup();
+    await ctx.view.show({ name: "d", title: "D", html: "<p>one</p>" });
+    const b = ctx.nvim.bufs.find((x) => x.name === "d") as Buf;
+    await bdelete(ctx, b);
+    await ctx.view.show({ name: "d", title: "D", html: "<p>two</p>" });
+    assert.equal(ctx.nvim.bufs.filter((x) => x.name.startsWith("d")).length, 1);
+    assert.equal(b.opts["&buftype"], "nofile");
+    assert.ok(ctx.keys.has(`${b.bufnr}:q`));
+    assert.deepEqual(b.lines, ["two"]);
+});
+
+test("a normal window showing the buffer later is not turned into a float", async () => {
+    const ctx = setup();
+    await ctx.view.show({ name: "n", title: "N", html: "<p>" + "word ".repeat(30) + "</p>" });
+    const b = ctx.nvim.bufs.find((x) => x.name === "n") as Buf;
+    ctx.nvim.wins.delete(ctx.nvim.winOf(b.bufnr));
+    ctx.nvim.wins.set(4000, { bufnr: b.bufnr, width: 50, opts: {} });
+    const configs = () => ctx.nvim.calls.filter(([f, a]) => f === "nvim_win_set_config" && a[0] === 4000).length;
+    for (const a of ctx.autocmds.filter((x) => x.event === "BufWinEnter" && x.buffer === b.bufnr)) {
+        await a.callback();
+    }
+    assert.equal(configs(), 0);
+    assert.ok(b.lines.every((l) => l.length <= 50) && b.lines.length > 2);
+});
+
+test("two shows at once set the buffer up once", async () => {
+    const ctx = setup();
+    await Promise.all([ctx.view.show({ name: "c", title: "C", html: "<p>a</p>" }), ctx.view.show({ name: "c", title: "C", html: "<p>b</p>" })]);
+    const b = ctx.nvim.bufs.find((x) => x.name === "c") as Buf;
+    assert.deepEqual(ctx.nvim.bufs.filter((x) => x.name.startsWith("c")).map((x) => x.name), ["c"]);
+    assert.equal(ctx.autocmds.filter((a) => a.event === "BufWinEnter" && a.buffer === b.bufnr).length, 1);
+    assert.deepEqual(b.lines, ["b"]);
+});
+
+test("a #fragment that is not valid percent-encoding still jumps", async () => {
+    const ctx = setup();
+    await ctx.view.show({ name: "f", title: "F", html: '<p><a href="#100%">go</a></p><p>pad</p><h3 id="100%">Full</h3>' });
+    const b = ctx.nvim.bufs.find((x) => x.name === "f") as Buf;
+    ctx.nvim.cursor = [0, 0];
+    await ctx.press(b.bufnr, "gx");
+    assert.equal(b.lines[ctx.nvim.cursor[0]], "▸ Full");
+});
+
+test("a window resize (WinResized) lays the view out again", async () => {
+    const nvim = new FakeNvim();
+    nvim.nvim = false;
+    const { view, autocmds } = setup(nvim);
+    await view.show({ name: "w", title: "W", html: "<p>" + "word ".repeat(30) + "</p>" });
+    const b = nvim.bufs.find((x) => x.name === "w") as Buf;
+    const narrow = b.lines.length;
+    (nvim.wins.get(nvim.winOf(b.bufnr)) as { width: number }).width = 200;
+    for (const a of autocmds.filter((x) => x.event === "WinResized")) {
+        await a.callback();
+    }
+    assert.ok(b.lines.length < narrow);
 });
