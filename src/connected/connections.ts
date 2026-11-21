@@ -217,6 +217,7 @@ export class AllConnectionsTreeDataProvider implements coc.TreeDataProvider<Conn
         const connectionToUpdate = allConnections.find((c) => c.id === checkResult.connectionId);
         if (connectionToUpdate) {
             connectionToUpdate.status = checkResult.success ? "ok" : "notok";
+            connectionToUpdate.description = `(${connectionToUpdate.status})`;
             this.refresh(connectionToUpdate);
         }
     }
