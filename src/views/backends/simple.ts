@@ -1,44 +1,41 @@
 /**
  * The simple backend, used when the optional htmlview extension is not installed. The renderer lives in
- * `./simple/` (parse, boxes, layout; pure `renderSimple`); this module re-exports it and shows the result in a
- * focusable float (`SimpleBackend`) with every tab panel in order. Highlight columns are 0 based UTF-8 byte offsets,
- * which is what coc (Vim and Neovim) expects.
+ * `./simple/` (parse, boxes, layout; pure `renderSimple`) and the view in `./simple/show.ts` (a scratch buffer in a
+ * float or split, browser-like tabs, links and keys, Vim and Neovim); this module re-exports them.
  */
-import type { FloatFactory } from "coc.nvim";
 import type { ViewBackend, ViewDescription } from "./backend";
-import { renderSimple } from "./simple/render";
-import { displayWidth } from "./simple/text";
+import { SimpleView, ViewHost } from "./simple/show";
 
 export { renderSimple } from "./simple/render";
 export type { Rendered, TabGroupInfo } from "./simple/render";
 export type { Highlight as SimpleHighlight, Layout, LayoutOptions, LinkRegion, TabRegion } from "./simple/layout";
 export { displayWidth } from "./simple/text";
+export { SimpleView } from "./simple/show";
+export type { ShowRequest, ViewHost, ViewNvim } from "./simple/show";
 
-/** A focusable coc float that stays open until closed (Vim and Neovim), with standard highlight groups. */
+/** coc's workspace and the SonarLint output as the view's host (coc is loaded lazily). */
+async function cocHost(): Promise<ViewHost> {
+    const coc = await import("coc.nvim");
+    const { logToSonarLintOutput } = await import("../../util/logging");
+    return {
+        nvim: coc.workspace.nvim,
+        registerLocalKeymap: (bufnr, mode, lhs, fn, opts) => coc.workspace.registerLocalKeymap(bufnr, mode, lhs, fn, opts),
+        registerAutocmd: (autocmd) => coc.workspace.registerAutocmd(autocmd),
+        openResource: (uri) => coc.workspace.openResource(uri),
+        log: (message) => logToSonarLintOutput(message),
+    };
+}
+
+/** Shows views in the built-in renderer's scratch buffer; `host` defaults to coc's. */
 export class SimpleBackend implements ViewBackend {
-    private factory: FloatFactory | undefined;
+    private view: SimpleView | undefined;
+
+    constructor(private readonly host?: ViewHost) {}
 
     async show(view: ViewDescription): Promise<void> {
-        const coc = await import("coc.nvim"); // lazy: renderSimple stays usable without the coc runtime
-        const cols = coc.workspace.env.columns;
-        const rows = coc.workspace.env.lines;
-        const width = Math.max(30, Math.min(100, cols - 12));
-        const html = view.prepass !== undefined ? view.prepass(view.html) : view.html;
-        const { lines, highlights } = renderSimple(html, { width, allPanels: true });
-        if (!this.factory) {
-            this.factory = coc.window.createFloatFactory({});
+        if (this.view === undefined) {
+            this.view = new SimpleView(this.host ?? (await cocHost()));
         }
-        const widest = lines.reduce((m, l) => Math.max(m, displayWidth(l)), 0);
-        await this.factory.show([{ filetype: "txt", content: lines.join("\n"), highlights: highlights.map((h) => ({ ...h })) }], {
-            title: view.title,
-            focusable: true,
-            autoHide: false,
-            close: true,
-            border: [1, 1, 1, 1],
-            rounded: true,
-            maxWidth: Math.min(widest + 2, cols - 6),
-            maxHeight: Math.max(5, rows - 8),
-            modes: ["n"],
-        });
+        await this.view.show({ name: view.name, title: view.title, html: view.html, prepass: view.prepass });
     }
 }
