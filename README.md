@@ -214,7 +214,11 @@ npm run watch    # rebuild on change
 
 ## License
 
-Copyright 2017-2025 `SonarSource`.
+coc-sonarlint is a port of [SonarQube for IDE: Visual Studio Code](https://github.com/SonarSource/sonarlint-vscode)
+to coc.nvim. Like the original it is licensed under the
+[GNU Lesser General Public License, Version 3.0](http://www.gnu.org/licenses/lgpl.txt), see `LICENSE.txt`.
+Copyright (C) 2017-2025 SonarSource SA; the coc.nvim port Copyright (C) 2022-2026 Svetlozar Iliev.
 
-Licensed under the
-[GNU Lesser General Public License, Version 3.0](http://www.gnu.org/licenses/lgpl.txt)
+The bundled language server is SonarSource's, under the same license. The bundled analyzers are SonarSource's and
+come with their own terms (the Sonar Source-Available License, and a proprietary license for some of them), see
+`NOTICE.txt`. The npm packages bundled into `lib/index.js` are listed in `THIRD_PARTY_NOTICES.txt`.

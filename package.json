@@ -2,7 +2,7 @@
     "name": "coc-sonarlint",
     "version": "1.0.27",
     "description": "Coc sonar lint language server extension client",
-    "license": "MIT",
+    "license": "LGPL-3.0-only",
     "main": "lib/index.js",
     "repository": {
         "type": "git",

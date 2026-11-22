@@ -1,0 +1,33 @@
+SonarQube for IDE: Visual Studio Code
+Copyright (C) 2017-2025 SonarSource SA
+All rights reserved.
+mailto:info AT sonarsource DOT com
+
+This product includes software developed at
+SonarSource (http://www.sonarsource.com/).
+
+This program is distributed with SonarQube analyzers that are subject to specific license terms.
+
+The sonar-csharp-enterprise-plugin and sonar-cfamily-plugin are SonarQube analyzers
+published under the following proprietary license: SonarSource SA  grants you a non-transferable,
+non-sublicensable, limited license to use the aforementioned plugins solely as part of this program.
+Any use, reproduction, distribution, or modification of the plugins outside the scope of this program is strictly prohibited.
+
+All of the other analyzers distributed with this program are published under the terms of the
+Sonar Source-Available License Version 1, as published by SonarSource SA.
+For more details see https://sonarsource.com/license/ssal/ 
+
+
+------------------------------------------------------------------------------
+
+coc-sonarlint is a port of SonarQube for IDE: Visual Studio Code
+
+(https://github.com/SonarSource/sonarlint-vscode) to coc.nvim.
+
+The coc.nvim port and its changes: Copyright (C) 2022-2026 Svetlozar Iliev,
+
+distributed under the same GNU Lesser General Public License, version 3, see LICENSE.txt.
+
+
+
+The npm packages bundled into lib/index.js are listed with their licenses in THIRD_PARTY_NOTICES.txt.
